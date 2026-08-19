@@ -73,18 +73,19 @@ Otros comandos: `npm test` (16 tests), `npm run build`, `npm run lint`, `npm run
 - **Cloudinary: NO.** Para las fotos de la landing alcanza con `public/`, y para las rutinas ya está Supabase Storage. Sumar un tercer servicio no aporta nada.
 
 ## Decisiones ABIERTAS
-- [ ] **Ventana de pago mensual** (idea de Kevin, 19/08). Ver sección propia más abajo. **Es la decisión más importante pendiente: cambia la Regla de Oro 2.**
+- [ ] **¿Se prende la ventana de pago?** Ya está implementada pero **apagada** (`DIAS_DE_GRACIA=0`). Confirmar con el gimnasio cuántos días de tolerancia quieren y poner ese número. Ver sección propia más abajo.
+- [ ] **Repo en GitHub.** Hoy el repo es solo local. Falta `gh auth login` (es interactivo, lo tiene que correr Kevin) o crear el repo a mano y pasar la URL. Después: `main` protegida + el socio como colaborador.
 - [ ] **DNI en la migración.** La planilla no tiene DNI. Se resuelve al escribir el script de import.
 - [ ] **Días de vencimiento por tipo de pase.** Hoy ambos en 30. Confirmar con el gimnasio.
 - [ ] **Precios de los planes** para mostrar en la landing (hoy dice "consultanos en recepción").
 - [ ] **Datos reales del gimnasio:** dirección exacta, teléfono, horarios, redes.
 - [ ] **Si el socio exige MongoDB.** _Nota: Prisma 7 ya no tiene conector MongoDB._
 
-## Propuesta pendiente: ventana de pago mensual
+## Ventana de pago mensual — ✅ implementada, apagada por defecto
 
-Idea de Kevin: el socio paga el 1° y tiene **del 1 al 5 del mes siguiente** para pagar la cuota siguiente, todos los meses mientras siga en el gimnasio. El dueño ve con anticipación quién entra en período de pago, y después quién ya se pasó.
+Idea de Kevin: el socio paga el 1° y tiene **del 1 al 5 del mes siguiente** para pagar la cuota siguiente. El dueño ve con anticipación quién entra en período de pago, y después quién ya se pasó.
 
-Esto agrega un **cuarto estado** entre amarillo y rojo:
+Está implementada en `src/lib/cuota.ts` como un **cuarto estado** entre amarillo y rojo:
 
 | Estado | Cuándo | ¿Entra? | Qué ve el dueño | Qué ve el socio |
 |---|---|---|---|---|
@@ -93,13 +94,13 @@ Esto agrega un **cuarto estado** entre amarillo y rojo:
 | **EN PERÍODO DE PAGO (naranja)** | Venció, pero dentro de los días de gracia | Sí | "Fernando tiene que pagar" | "Se te venció la cuota, tenés hasta el 5" |
 | VENCIDO (rojo) | Se pasó la gracia | No | "Fernando está moroso" | "Cuota vencida" |
 
-**Recomendación:** hacerlo, pero con los días de gracia **configurables y en cero por defecto**, para que el sistema siga comportándose exactamente como hoy hasta que el gimnasio decida activarlo. Implica:
+**Cómo se prende:** poner `DIAS_DE_GRACIA=5` (o los días que decida el gimnasio) en `.env.local`. Con `0` — que es el default — el sistema se comporta exactamente como la Regla de Oro 2 original: vencido es rojo y punto. Hay un test que fija ese comportamiento para que nadie lo cambie sin darse cuenta.
 
-1. Agregar `EN_PERIODO_DE_PAGO` a `EstadoCuota` en `src/lib/cuota.ts` (sigue siendo la única implementación).
-2. Nueva variable `DIAS_DE_GRACIA` (default 0).
-3. **Modificar la Regla de Oro 2 en `CLAUDE.md`**, que hoy dice que sin `fecha_vencimiento >= hoy` es rojo. Por eso hace falta el OK explícito de Kevin: hay que dejar por escrito que el gimnasio regala esos días de acceso.
+Quedó documentado en la **Regla de Oro 2 de `CLAUDE.md`**, no solo en el código: prender la ventana significa que el gimnasio regala esos días de acceso, y eso es una decisión de negocio, no un detalle técnico.
 
-Lo de "pagás siempre del 1 al 5" es una variante más fuerte: en vez de `fecha_pago + 30 días`, el vencimiento se ancla a un día del mes por socio (`dia_de_cobro`). Se puede hacer después; la gracia sola ya cubre el 80% del caso.
+También se agregaron `mensajeParaAdmin()` y `mensajeParaSocio()` en `src/lib/cuota.ts`: la misma información con dos tonos. Al dueño "Fernando tiene que pagar: le quedan 4 días", al socio "se te venció la cuota, pero tenés 4 días para renovarla y seguir entrenando". Las va a reusar el dashboard y el portal.
+
+**Falta todavía:** lo de "pagás siempre del 1 al 5" en sentido estricto — anclar el vencimiento a un día fijo del mes por socio (`dia_de_cobro`) en vez de `fecha_pago + 30 días`. La gracia sola ya cubre casi todo el caso; esto se puede hacer después.
 
 **Avisos automáticos por WhatsApp o mail siguen fuera del MVP.** Lo que sí entra es que el dueño vea la lista en el dashboard y el socio vea el mensaje al entrar a su portal.
 
@@ -133,6 +134,7 @@ Lo de "pagás siempre del 1 al 5" es una variante más fuerte: en vez de `fecha_
 - La landing tiene los datos del gimnasio hardcodeados. Si el dueño los quiere editar solo, hay que sacarlos a la base.
 
 ## Bitácora
+- **19/08/2026** — **Ventana de pago.** Cuarto estado `EN_PERIODO_DE_PAGO` (naranja) en `src/lib/cuota.ts`, controlado por `DIAS_DE_GRACIA` y apagado por defecto. Mensajes separados para dueño y socio. Recepción muestra el panel naranja con los días que le quedan para renovar. Regla de Oro 2 de `CLAUDE.md` actualizada. 26 tests.
 - **19/08/2026** — **Página pública.** Landing del gimnasio en `/`, reemplazando la default de Next: hero, planes (lee las etiquetas de `src/lib/pases.ts`, no las duplica), horarios y footer con acceso del personal. Componente `Foto` que detecta si el archivo existe y muestra un marcador con el nombre que falta, así poner fotos no requiere tocar código. Descubierto que este shadcn está sobre **Base UI y no Radix**: no hay `asChild`, va `render={<Link/>}` (anotado en `CLAUDE.md` §10).
 - **19/08/2026** — **Pasos 5 y 6.** Auth de admin con NextAuth v5 (DNI + password, solo rol ADMIN activo), config partida en `auth.config.ts` (edge-safe, la usa `proxy.ts`) y `auth.ts` (Prisma + bcrypt). Mensaje de error único y comparación contra un hash descartable cuando el DNI no existe, para no filtrar por tiempo de respuesta qué socios están registrados. Seed idempotente del primer admin desde variables de entorno. Pantalla de recepción con `src/lib/recepcion.ts` como lógica de puerta (reusa `calcularEstadoCuota`, no la duplica), API `POST /api/recepcion` que verifica sesión ADMIN server-side, y panel verde/amarillo/rojo con ícono y texto además del color. 8 tests con Prisma mockeado verifican que ningún rechazo escriba en la bitácora.
 - **19/08/2026** — **Pasos 3 y 4.** Schema de Prisma con las 5 entidades, `dni` unique, enums (incluye `MERCADO_PAGO`) e índices sobre las dos consultas calientes. Las FK de `Asistencia` en RESTRICT (no CASCADE) para que borrar un socio no arrastre su bitácora. SQL de la migración generado sin conexión. `src/lib/cuota.ts` con la única implementación del estado de cuota, comparando por día calendario en zona argentina.
