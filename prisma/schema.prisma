@@ -1,7 +1,8 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
+// Total Fit — modelo de datos
+// Fuente de verdad: CLAUDE.md §3 (modelo) y §4 (Reglas de Oro).
+//
+// Prisma 7: el generator es `prisma-client` (no `prisma-client-js`), `output` es
+// obligatorio y la URL de la base vive en `prisma.config.ts`, no acá.
 
 generator client {
   provider = "prisma-client"
@@ -10,4 +11,143 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+// =============================================================================
+// Enums
+// =============================================================================
+
+enum EstadoSede {
+  ACTIVA
+  CERRADA
+}
+
+enum Rol {
+  ADMIN
+  CLIENTE
+}
+
+/// Vigencia de la CUENTA del usuario. No confundir con el estado de cuota
+/// (ACTIVO / PRÓXIMO A VENCER / VENCIDO), que es derivado y no se guarda.
+enum EstadoUsuario {
+  ACTIVO
+  INACTIVO
+}
+
+enum MetodoPago {
+  EFECTIVO
+  TRANSFERENCIA
+  QR
+  MERCADO_PAGO
+}
+
+/// Los días de vigencia de cada pase están en `src/lib/pases.ts`.
+enum TipoPase {
+  MEDIO
+  LIBRE
+}
+
+enum MetodoRegistro {
+  DNI_MANUAL
+}
+
+// =============================================================================
+// Entidades
+// =============================================================================
+
+model Sede {
+  id_sede   String     @id @default(cuid())
+  nombre    String
+  direccion String?
+  estado    EstadoSede @default(ACTIVA)
+
+  usuarios Usuario[]
+}
+
+/// Un único modelo para admins y socios, diferenciados por `rol` (CLAUDE.md §3).
+model Usuario {
+  id      String @id @default(cuid())
+  /// Regla de Oro 1: el DNI es la clave de negocio, única e irrepetible.
+  dni     String @unique
+  sede_id String
+
+  nombre   String
+  apellido String
+  email    String?
+  telefono String?
+
+  /// Hash bcrypt. Obligatorio para ADMIN, opcional para CLIENTE en v1: Prisma no
+  /// puede expresar esa condición, se valida en la API y en el seed.
+  password String?
+
+  rol            Rol           @default(CLIENTE)
+  estado         EstadoUsuario @default(ACTIVO)
+  fecha_registro DateTime      @default(now())
+
+  sede              Sede         @relation(fields: [sede_id], references: [id_sede])
+  pagos             Pago[]       @relation("PagosDelSocio")
+  pagos_registrados Pago[]       @relation("PagosRegistradosPorAdmin")
+  asistencias       Asistencia[]
+  rutinas           Rutina[]
+
+  @@index([sede_id])
+  @@index([apellido, nombre])
+}
+
+model Pago {
+  id_pago    String @id @default(cuid())
+  usuario_id String
+
+  /// Monto libre: el mismo plan aparece con importes distintos (CLAUDE.md §3).
+  monto             Decimal  @db.Decimal(12, 2)
+  fecha_pago        DateTime
+  /// Calculada a partir de `fecha_pago` + los días del `tipo_pase`.
+  /// De acá sale el estado de cuota (Regla de Oro 2).
+  fecha_vencimiento DateTime
+
+  metodo_pago MetodoPago
+  tipo_pase   TipoPase
+
+  /// Regla de Oro 4: el admin que cobró, tomado siempre de la sesión del
+  /// servidor. No entra dinero anónimo.
+  registrado_por String
+  creado_en      DateTime @default(now())
+
+  usuario Usuario @relation("PagosDelSocio", fields: [usuario_id], references: [id])
+  admin   Usuario @relation("PagosRegistradosPorAdmin", fields: [registrado_por], references: [id])
+
+  // Consulta de la puerta: último vencimiento de un socio.
+  @@index([usuario_id, fecha_vencimiento])
+  // Consulta del dashboard: quiénes vencen / vencieron en un rango.
+  @@index([fecha_vencimiento])
+  @@index([registrado_por])
+  @@index([fecha_pago])
+}
+
+/// Bitácora de ingresos. Regla de Oro 3: solo se crea y se lee, jamás se
+/// modifica ni se borra. No exponer update/delete en ninguna API.
+model Asistencia {
+  id_asistencia   String         @id @default(cuid())
+  usuario_id      String
+  fecha_hora      DateTime       @default(now())
+  metodo_registro MetodoRegistro @default(DNI_MANUAL)
+
+  usuario Usuario @relation(fields: [usuario_id], references: [id])
+
+  @@index([usuario_id, fecha_hora])
+  @@index([fecha_hora])
+}
+
+/// Archivo de rutina (PDF o imagen) en Supabase Storage. La rutina "actual" de
+/// un socio es la de `actualizada_en` más reciente; las anteriores quedan como
+/// histórico. Sin editor de ejercicios en v1.
+model Rutina {
+  id_rutina      String   @id @default(cuid())
+  usuario_id     String
+  archivo_url    String
+  actualizada_en DateTime @default(now()) @updatedAt
+
+  usuario Usuario @relation(fields: [usuario_id], references: [id])
+
+  @@index([usuario_id, actualizada_en])
 }
