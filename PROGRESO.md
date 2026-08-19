@@ -1,0 +1,57 @@
+# PROGRESO.md — Total Fit
+
+> Bitácora viva del proyecto. Claude Code: actualizá este archivo al final de cada sesión (qué se hizo, qué sigue, qué se decidió). El detalle técnico completo está en `CLAUDE.md`.
+
+## Estado actual
+**Fase 1 — en curso.** Scaffolding listo: Next.js 16 + TypeScript + Tailwind v4 + shadcn/ui, con Prisma 7, NextAuth v5 y el driver de Postgres instalados. El proyecto compila (`npm run build` OK). Falta el schema, la migración y las pantallas.
+
+## Decisiones ya tomadas
+- **Stack:** Next.js (App Router) + **PostgreSQL + Prisma (Supabase)** + NextAuth + Tailwind/shadcn. Archivos de rutina en Supabase Storage. Deploy en Vercel + Supabase. _(Postgres por modelo relacional + ecosistema Supabase ya usado en las tiendas.)_
+- **Rutina del cliente:** el admin/profe **sube un archivo (PDF/imagen)** y el socio lo ve/descarga. Editor estructurado de ejercicios = fase 2.
+- **Portal cliente en v1:** SÍ, versión mínima (ver estado de cuota + descargar rutina).
+- **Umbral "próximo a vencer":** 7 días (configurable vía `DIAS_PROXIMO_A_VENCER`).
+- **Alcance de sedes:** un gimnasio (Total Fit) con varias **sedes**. Vender a otros gimnasios = fase posterior (instancia separada).
+- **Estado de cuota derivado:** ACTIVO / PRÓXIMO A VENCER / VENCIDO se calculan desde `fecha_vencimiento`, no se guardan.
+- **Método de pago:** se agrega `MERCADO_PAGO` al enum.
+- **Asistencias inmutables** y **trazabilidad de caja** (registrado_por server-side): reglas duras.
+
+### Decisiones de la sesión del 19/08/2026
+- **DB de desarrollo:** PostgreSQL 18 **local** (servicio `postgresql-x64-18`, ya instalado en la máquina de Kevin), base `totalfit_dev`. Docker descartado (no está instalado). Supabase queda para el deploy.
+- **`tipo_pase`:** enum `MEDIO | LIBRE` en Prisma + mapa `tipo_pase → días` en `src/lib/pases.ts` (default 30). Sin tabla configurable en v1.
+- **`/recepcion` requiere sesión ADMIN.** La PC de la puerta queda logueada; evita exponer datos de socios y ensuciar la bitácora inmutable.
+- **Amarillo = puede pasar.** Solo el rojo (VENCIDO o DNI inexistente) deniega el acceso.
+- **La asistencia se registra solo si el acceso está permitido** — la bitácora es de ingresos, no de consultas.
+- **Zona horaria fija** `America/Argentina/Buenos_Aires` para comparar días: un pase que vence hoy es ACTIVO todo el día.
+- **`/prisma` va en la raíz** del repo (default de Prisma), no dentro de `/src` como sugería el diagrama de `CLAUDE.md` §6.
+
+## Decisiones ABIERTAS (no bloquean empezar)
+- [ ] **DNI en la migración.** La planilla no tiene DNI (que es la clave). Se resuelve al escribir el script de import (cargar DNI real vs. provisorio). No frena construir la app.
+- [ ] **Días de vencimiento por tipo de pase.** En la planilla: "medio"/"medio pase" ≈ $40.000 y "libre"/"pase libre" ≈ $45.000. Por ahora ambos vencen a +30 días en `src/lib/pases.ts`; confirmar con el gimnasio.
+- [ ] **Si el socio exige MongoDB** en vez de Postgres, avisar (cambia solo la capa de datos). _Nota: Prisma 7 ya no tiene conector MongoDB._
+
+## Deuda técnica anotada
+- `npm audit`: 3 vulnerabilidades **high** en `deepmerge-ts`, que entra por `@prisma/config` → `prisma` (CLI). Es cadena de **devDependency**, no llega al runtime de la app. El fix automático baja a Prisma 6 (breaking). Se revisa cuando Prisma publique el bump.
+
+---
+
+## Fase 1 — pasos
+
+- [x] **1. Confirmar entendimiento** del modelo, reglas de oro y stack.
+- [x] **2. Scaffolding.** Next.js 16 (App Router, TS, Tailwind v4, `src/`), shadcn/ui, Prisma 7 + `@prisma/adapter-pg`, NextAuth v5, zod, bcryptjs, date-fns, vitest. `git init`, `.env.example`, `prisma.config.ts`.
+- [ ] **3. Schema de Prisma** (Sede, Usuario, Pago, Asistencia, Rutina) + primera migración contra `totalfit_dev`.
+- [ ] **4. `src/lib/cuota.ts`** — función única de estado de cuota (ACTIVO / PRÓXIMO A VENCER / VENCIDO, umbral 7 días) + tests.
+- [ ] **5. Auth de admin** con NextAuth credenciales (DNI + password), `proxy.ts` y seed del primer admin.
+- [ ] **6. Pantalla de recepción** — DNI → verde/amarillo/rojo + registro de asistencia inmutable.
+
+## Fase 2 — pendiente (resto del MVP)
+1. [ ] CRUD de socios (Usuario rol CLIENTE).
+2. [ ] Registro de pagos con `fecha_vencimiento` autocalculada y `registrado_por` automático.
+3. [ ] Dashboard admin con contadores derivados, cobros del mes y morosos.
+4. [ ] Portal cliente mínimo (estado de cuota + descarga de rutina).
+5. [ ] Carga de rutinas a Supabase Storage.
+6. [ ] Script de importación de la planilla (con limpieza de datos).
+7. [ ] Repo en GitHub con `main` protegida + socio como colaborador.
+
+## Bitácora
+- **18/08/2026** — Creados `CLAUDE.md` y `PROGRESO.md` a partir del modelo de datos conceptual/lógico de Total Fit y de la planilla real de socios. Definido stack y reglas de oro. Pendiente resolver decisiones abiertas antes de codear.
+- **19/08/2026** — **Paso 2 (scaffolding).** Proyecto Next.js 16 creado con TypeScript, Tailwind v4, App Router y `src/`. Instalados Prisma 7 (+ driver adapter `@prisma/adapter-pg`), NextAuth v5, shadcn/ui (button, input, card, label, badge, sonner), zod, bcryptjs, date-fns/@date-fns/tz, vitest, tsx. `git init` + `.env.example`. `npm run build` pasa. Corregidos los pasos que todavía decían MongoDB/Mongoose (contradecían `CLAUDE.md`). Anotado en `CLAUDE.md` §10 que Next 16 renombró `middleware.ts` → `proxy.ts` y que Prisma 7 exige generator `prisma-client` con `output` + driver adapter.
