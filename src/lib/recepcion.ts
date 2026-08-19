@@ -16,11 +16,14 @@ export type MotivoRechazo =
 export interface ResultadoIngreso {
   estado: EstadoCuota;
   accesoPermitido: boolean;
+  /** Entra, pero ya le corresponde pagar (naranja). */
+  debePagar: boolean;
   motivo: MotivoRechazo | null;
   socio: { nombre: string; apellido: string; dni: string } | null;
   /** ISO 8601, o `null` si el socio no tiene ningún pago. */
   fechaVencimiento: string | null;
   diasRestantes: number | null;
+  diasDeGraciaRestantes: number | null;
   /** Si se escribió una fila en la bitácora por esta consulta. */
   asistenciaRegistrada: boolean;
 }
@@ -28,8 +31,10 @@ export interface ResultadoIngreso {
 const RECHAZO_BASE = {
   estado: "VENCIDO",
   accesoPermitido: false,
+  debePagar: true,
   fechaVencimiento: null,
   diasRestantes: null,
+  diasDeGraciaRestantes: null,
   asistenciaRegistrada: false,
 } satisfies Omit<ResultadoIngreso, "motivo" | "socio">;
 
@@ -101,10 +106,12 @@ export async function evaluarIngresoPorDni(
   return {
     estado: cuota.estado,
     accesoPermitido: true,
+    debePagar: cuota.debePagar,
     motivo: null,
     socio,
     fechaVencimiento: vencimiento?.toISOString() ?? null,
     diasRestantes: cuota.diasRestantes,
+    diasDeGraciaRestantes: cuota.diasDeGraciaRestantes,
     asistenciaRegistrada: true,
   };
 }

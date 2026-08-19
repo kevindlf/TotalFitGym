@@ -54,11 +54,14 @@ Sede → Usuarios · Usuario(cliente) → Pagos · Usuario(cliente) → Asistenc
 2. **Lógica de puerta (recepción).** Al ingresar un DNI, el sistema evalúa **cobertura temporal**, no identidad:
    - ¿Existe un Pago con `fecha_vencimiento >= hoy`? → **ACTIVO** → verde (acceso permitido).
    - Si no existe o el DNI no está registrado → **VENCIDO/INACTIVO** → rojo (acceso denegado).
-   - Si `fecha_vencimiento` está entre hoy y hoy+N días (N configurable, default **7**) → **PRÓXIMO A VENCER** → amarillo.
+   - Si `fecha_vencimiento` está entre hoy y hoy+N días (N configurable, default **7**) → **PRÓXIMO A VENCER** → amarillo (acceso permitido).
+   - **Ventana de pago (opcional).** Si `DIAS_DE_GRACIA > 0` y el vencimiento cayó dentro de esos días → **EN PERÍODO DE PAGO** → naranja: **entra igual**, pero ya le corresponde pagar. Sirve para el esquema "pagás el 1° y tenés hasta el 5 para renovar". Default **0**, o sea apagado: con la config por defecto vencido es rojo y punto. Prenderlo es una decisión de negocio explícita — el gimnasio regala esos días de acceso.
+   - El vencimiento que se evalúa es el **más lejano** del socio, no el del último pago cargado.
+   - Un socio con `estado = INACTIVO` (cuenta dada de baja) es rojo aunque le quede cuota paga.
 3. **Inmutabilidad de asistencias.** Una vez registrada, queda sellada. La API de asistencias expone solo `create` y `read`. Sin update ni delete.
 4. **Trazabilidad de caja.** Todo Pago guarda automáticamente `registrado_por` = admin logueado, tomado del **lado del servidor** (sesión), nunca de un campo del cliente. No entra dinero anónimo.
 
-> El **estado de cuota** (ACTIVO / PRÓXIMO A VENCER / VENCIDO) es **derivado** de `fecha_vencimiento`, se calcula al vuelo — no se guarda. El `estado` de Usuario (ACTIVO/INACTIVO) es la vigencia de la cuenta, cosa distinta.
+> El **estado de cuota** (ACTIVO / PRÓXIMO A VENCER / EN PERÍODO DE PAGO / VENCIDO) es **derivado** de `fecha_vencimiento`, se calcula al vuelo — no se guarda. El `estado` de Usuario (ACTIVO/INACTIVO) es la vigencia de la cuenta, cosa distinta.
 
 ## 5. Alcance del MVP (v1)
 

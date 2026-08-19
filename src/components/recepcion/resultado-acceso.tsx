@@ -28,6 +28,12 @@ const ESTILOS: Record<
     icono: TriangleAlert,
     titulo: "PUEDE PASAR",
   },
+  // Ventana de pago: entra, pero ya le corresponde pagar.
+  EN_PERIODO_DE_PAGO: {
+    fondo: "bg-orange-600 text-white",
+    icono: TriangleAlert,
+    titulo: "PUEDE PASAR · DEBE PAGAR",
+  },
   VENCIDO: {
     fondo: "bg-red-600 text-white",
     icono: CircleX,
@@ -106,6 +112,15 @@ export function ResultadoAcceso({
       {resultado.motivo ? (
         <p className="text-lg font-medium">
           {MENSAJES_RECHAZO[resultado.motivo]}
+        </p>
+      ) : null}
+
+      {resultado.estado === "EN_PERIODO_DE_PAGO" &&
+      resultado.diasDeGraciaRestantes !== null ? (
+        <p className="text-lg font-medium">
+          {resultado.diasDeGraciaRestantes === 0
+            ? "Último día para renovar la cuota."
+            : `Le ${resultado.diasDeGraciaRestantes === 1 ? "queda 1 día" : `quedan ${resultado.diasDeGraciaRestantes} días`} para renovar la cuota.`}
         </p>
       ) : null}
 
