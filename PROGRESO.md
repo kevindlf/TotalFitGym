@@ -3,7 +3,9 @@
 > Bitácora viva del proyecto. Claude Code: actualizá este archivo al final de cada sesión (qué se hizo, qué sigue, qué se decidió). El detalle técnico completo está en `CLAUDE.md`.
 
 ## Estado actual
-**Fase 1 — en curso.** Scaffolding listo: Next.js 16 + TypeScript + Tailwind v4 + shadcn/ui, con Prisma 7, NextAuth v5 y el driver de Postgres instalados. El proyecto compila (`npm run build` OK). Falta el schema, la migración y las pantallas.
+**Fase 1 — en curso.** Scaffolding, schema de Prisma y cálculo de estado de cuota listos. `npm run build`, `npm run lint` y `npm test` (8/8) pasan.
+
+> ⚠️ **Bloqueante para seguir:** falta crear `.env.local` (copia de `.env.example`) con la password del usuario `postgres`. Sin eso no se puede crear la base `totalfit_dev` ni aplicar la migración. La migración inicial ya está **escrita** en `prisma/migrations/`, solo falta correr `npx prisma migrate deploy`.
 
 ## Decisiones ya tomadas
 - **Stack:** Next.js (App Router) + **PostgreSQL + Prisma (Supabase)** + NextAuth + Tailwind/shadcn. Archivos de rutina en Supabase Storage. Deploy en Vercel + Supabase. _(Postgres por modelo relacional + ecosistema Supabase ya usado en las tiendas.)_
@@ -38,8 +40,9 @@
 
 - [x] **1. Confirmar entendimiento** del modelo, reglas de oro y stack.
 - [x] **2. Scaffolding.** Next.js 16 (App Router, TS, Tailwind v4, `src/`), shadcn/ui, Prisma 7 + `@prisma/adapter-pg`, NextAuth v5, zod, bcryptjs, date-fns, vitest. `git init`, `.env.example`, `prisma.config.ts`.
-- [ ] **3. Schema de Prisma** (Sede, Usuario, Pago, Asistencia, Rutina) + primera migración contra `totalfit_dev`.
-- [ ] **4. `src/lib/cuota.ts`** — función única de estado de cuota (ACTIVO / PRÓXIMO A VENCER / VENCIDO, umbral 7 días) + tests.
+- [x] **3a. Schema de Prisma** (Sede, Usuario, Pago, Asistencia, Rutina) + SQL de la migración inicial + singleton `src/lib/prisma.ts`.
+- [ ] **3b. Aplicar la migración** contra `totalfit_dev`. ⛔ Bloqueado: falta `.env.local`.
+- [x] **4. `src/lib/cuota.ts`** — función única de estado de cuota (ACTIVO / PRÓXIMO A VENCER / VENCIDO, umbral 7 días) + `src/lib/pases.ts` + 8 tests con vitest.
 - [ ] **5. Auth de admin** con NextAuth credenciales (DNI + password), `proxy.ts` y seed del primer admin.
 - [ ] **6. Pantalla de recepción** — DNI → verde/amarillo/rojo + registro de asistencia inmutable.
 
@@ -54,4 +57,5 @@
 
 ## Bitácora
 - **18/08/2026** — Creados `CLAUDE.md` y `PROGRESO.md` a partir del modelo de datos conceptual/lógico de Total Fit y de la planilla real de socios. Definido stack y reglas de oro. Pendiente resolver decisiones abiertas antes de codear.
+- **19/08/2026** — **Pasos 3 y 4.** Schema de Prisma con las 5 entidades, `dni` unique, enums (incluye `MERCADO_PAGO`) e índices sobre las dos consultas calientes: `(usuario_id, fecha_vencimiento)` para la puerta y `(fecha_vencimiento)` para el dashboard. Las FK de `Asistencia` quedaron en RESTRICT (no CASCADE) para que borrar un socio no arrastre su bitácora. SQL de la migración generado sin conexión con `prisma migrate diff`; falta aplicarlo. `src/lib/cuota.ts` con la única implementación del estado de cuota (comparación por día calendario en zona argentina, para que quien vence hoy pueda entrar todo el día) + `src/lib/pases.ts` con el mapa `tipo_pase → días`. 8 tests en vitest cubriendo los bordes: sin pagos, vence hoy, vencido ayer, justo en el umbral, umbral+1, umbral custom y el caso UTC vs. hora local.
 - **19/08/2026** — **Paso 2 (scaffolding).** Proyecto Next.js 16 creado con TypeScript, Tailwind v4, App Router y `src/`. Instalados Prisma 7 (+ driver adapter `@prisma/adapter-pg`), NextAuth v5, shadcn/ui (button, input, card, label, badge, sonner), zod, bcryptjs, date-fns/@date-fns/tz, vitest, tsx. `git init` + `.env.example`. `npm run build` pasa. Corregidos los pasos que todavía decían MongoDB/Mongoose (contradecían `CLAUDE.md`). Anotado en `CLAUDE.md` §10 que Next 16 renombró `middleware.ts` → `proxy.ts` y que Prisma 7 exige generator `prisma-client` con `output` + driver adapter.
