@@ -43,7 +43,7 @@
 - [x] **3a. Schema de Prisma** (Sede, Usuario, Pago, Asistencia, Rutina) + SQL de la migración inicial + singleton `src/lib/prisma.ts`.
 - [ ] **3b. Aplicar la migración** contra `totalfit_dev`. ⛔ Bloqueado: falta `.env.local`.
 - [x] **4. `src/lib/cuota.ts`** — función única de estado de cuota (ACTIVO / PRÓXIMO A VENCER / VENCIDO, umbral 7 días) + `src/lib/pases.ts` + 8 tests con vitest.
-- [ ] **5. Auth de admin** con NextAuth credenciales (DNI + password), `proxy.ts` y seed del primer admin.
+- [x] **5. Auth de admin** con NextAuth credenciales (DNI + password), `proxy.ts` y seed del primer admin. _(Escrito y compilando; falta probarlo contra la base.)_
 - [ ] **6. Pantalla de recepción** — DNI → verde/amarillo/rojo + registro de asistencia inmutable.
 
 ## Fase 2 — pendiente (resto del MVP)
