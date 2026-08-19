@@ -122,6 +122,7 @@ Este proyecto usa versiones nuevas cuyas convenciones cambiaron respecto de lo h
 
 - **Next.js 16:** `middleware.ts` ahora se llama **`proxy.ts`** (misma funcionalidad, va en `/src`). La doc oficial local está en `node_modules/next/dist/docs/`. Ver también `@AGENTS.md`.
 - **Prisma 7:** generator `prisma-client` (no `prisma-client-js`), `output` obligatorio → el cliente se genera en `src/generated/prisma` y se importa desde ahí, **no** desde `@prisma/client`. Requiere **driver adapter** (`@prisma/adapter-pg` + `pg`). La config del CLI vive en `prisma.config.ts` y las variables se cargan a mano con `dotenv` desde `.env.local`.
-- **Tailwind v4** (config en CSS, sin `tailwind.config.js`) + shadcn/ui.
+- **Tailwind v4** (config en CSS, sin `tailwind.config.js`).
+- **shadcn/ui sobre Base UI, no Radix.** No existe la prop `asChild`: para renderizar un `Button` como `Link` va `render={<Link href="…" />}`.
 
 @AGENTS.md
