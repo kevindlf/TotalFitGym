@@ -24,6 +24,8 @@
 - **Amarillo = puede pasar.** Solo el rojo (VENCIDO o DNI inexistente) deniega el acceso.
 - **La asistencia se registra solo si el acceso está permitido** — la bitácora es de ingresos, no de consultas.
 - **Zona horaria fija** `America/Argentina/Buenos_Aires` para comparar días: un pase que vence hoy es ACTIVO todo el día.
+- **Socio con cuenta INACTIVA → rojo**, aunque le quede cuota paga. Una baja es una baja. ⚠️ Esto no está en `CLAUDE.md`: **confirmar con Kevin**.
+- **El vencimiento que manda es el más lejano**, no el del último pago cargado: si el admin registra un pago viejo después de uno nuevo, el socio no pierde la cobertura que ya pagó.
 - **`/prisma` va en la raíz** del repo (default de Prisma), no dentro de `/src` como sugería el diagrama de `CLAUDE.md` §6.
 
 ## Decisiones ABIERTAS (no bloquean empezar)
@@ -44,7 +46,8 @@
 - [ ] **3b. Aplicar la migración** contra `totalfit_dev`. ⛔ Bloqueado: falta `.env.local`.
 - [x] **4. `src/lib/cuota.ts`** — función única de estado de cuota (ACTIVO / PRÓXIMO A VENCER / VENCIDO, umbral 7 días) + `src/lib/pases.ts` + 8 tests con vitest.
 - [x] **5. Auth de admin** con NextAuth credenciales (DNI + password), `proxy.ts` y seed del primer admin. _(Escrito y compilando; falta probarlo contra la base.)_
-- [ ] **6. Pantalla de recepción** — DNI → verde/amarillo/rojo + registro de asistencia inmutable.
+- [x] **6. Pantalla de recepción** — DNI → verde/amarillo/rojo + registro de asistencia inmutable. _(Escrita y compilando; falta probarla contra la base.)_
+- [ ] **7. Verificación end-to-end** con la base andando: migración, seed, login y los tres colores en pantalla.
 
 ## Fase 2 — pendiente (resto del MVP)
 1. [ ] CRUD de socios (Usuario rol CLIENTE).
@@ -57,5 +60,6 @@
 
 ## Bitácora
 - **18/08/2026** — Creados `CLAUDE.md` y `PROGRESO.md` a partir del modelo de datos conceptual/lógico de Total Fit y de la planilla real de socios. Definido stack y reglas de oro. Pendiente resolver decisiones abiertas antes de codear.
+- **19/08/2026** — **Pasos 5 y 6.** Auth de admin con NextAuth v5 (DNI + password, solo rol ADMIN activo), config partida en `auth.config.ts` (edge-safe, la usa `proxy.ts`) y `auth.ts` (Prisma + bcrypt). Mensaje de error único y comparación contra un hash descartable cuando el DNI no existe, para no filtrar por tiempo de respuesta qué socios están registrados. Seed idempotente del primer admin desde variables de entorno, con socios demo opcionales (`SEED_DATOS_DEMO=true`). Pantalla de recepción con `src/lib/recepcion.ts` como lógica de puerta (reusa `calcularEstadoCuota`, no la duplica), API `POST /api/recepcion` que verifica sesión ADMIN server-side, y panel verde/amarillo/rojo con ícono y texto además del color. `git grep` confirma que no existe ningún `asistencia.update`/`delete` en el proyecto.
 - **19/08/2026** — **Pasos 3 y 4.** Schema de Prisma con las 5 entidades, `dni` unique, enums (incluye `MERCADO_PAGO`) e índices sobre las dos consultas calientes: `(usuario_id, fecha_vencimiento)` para la puerta y `(fecha_vencimiento)` para el dashboard. Las FK de `Asistencia` quedaron en RESTRICT (no CASCADE) para que borrar un socio no arrastre su bitácora. SQL de la migración generado sin conexión con `prisma migrate diff`; falta aplicarlo. `src/lib/cuota.ts` con la única implementación del estado de cuota (comparación por día calendario en zona argentina, para que quien vence hoy pueda entrar todo el día) + `src/lib/pases.ts` con el mapa `tipo_pase → días`. 8 tests en vitest cubriendo los bordes: sin pagos, vence hoy, vencido ayer, justo en el umbral, umbral+1, umbral custom y el caso UTC vs. hora local.
 - **19/08/2026** — **Paso 2 (scaffolding).** Proyecto Next.js 16 creado con TypeScript, Tailwind v4, App Router y `src/`. Instalados Prisma 7 (+ driver adapter `@prisma/adapter-pg`), NextAuth v5, shadcn/ui (button, input, card, label, badge, sonner), zod, bcryptjs, date-fns/@date-fns/tz, vitest, tsx. `git init` + `.env.example`. `npm run build` pasa. Corregidos los pasos que todavía decían MongoDB/Mongoose (contradecían `CLAUDE.md`). Anotado en `CLAUDE.md` §10 que Next 16 renombró `middleware.ts` → `proxy.ts` y que Prisma 7 exige generator `prisma-client` con `output` + driver adapter.
