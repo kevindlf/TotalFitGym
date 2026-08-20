@@ -4,7 +4,18 @@
 
 ## Estado actual — 19/08/2026
 
-**Fase 1 casi cerrada.** El código de los 6 pasos está escrito, compila y pasa los tests (16/16). Lo único que falta para darla por terminada es **probarla contra una base de datos**, que sigue bloqueado.
+**Fase 1 CERRADA y verificada contra la base real.** La base `totalfit_dev` existe, la migración está aplicada y el seed cargó datos. Login, recepción, panel y portal probados de punta a punta con datos reales.
+
+### Las 4 Reglas de Oro, verificadas contra la base
+
+| Regla | Cómo se verificó | Resultado |
+|---|---|---|
+| 1 · DNI único | `INSERT` con un DNI repetido | ❌ rechazado por `Usuario_dni_key` ✅ |
+| 2 · Puerta | Consulta de los 4 DNI demo + uno inexistente | verde / amarillo / rojo / rojo / rojo ✅ |
+| 3 · Asistencias inmutables | Conteo de asistencias por socio tras las consultas | solo los 2 que pasaron tienen fila ✅ |
+| 4 · Trazabilidad | `JOIN` de pagos con su admin | los 3 pagos tienen dueño, ninguno anónimo ✅ |
+
+También verificado en el login: un socio (rol CLIENTE) **no puede** entrar al panel, y una contraseña incorrecta no crea sesión.
 
 | Superficie | Estado |
 |---|---|
@@ -14,15 +25,16 @@
 | Dashboard del dueño | ✅ Hecho. Sin probar contra la base. |
 | Socios (listado, alta, ficha, baja) | ✅ Hecho. Sin probar contra la base. |
 | Registro de pagos | ✅ Hecho. Sin probar contra la base. |
-| Portal del cliente (consulta por DNI) | ✅ Hecho. Sin probar contra la base. |
+| Portal del cliente (consulta por DNI) | ✅ Hecho y probado. |
+| Personal (alta de profes/empleados) | ✅ Hecho y probado. |
 | Rutinas (subir/descargar) | ❌ No empezado. Necesita Supabase + claves de socio. |
 | Import de la planilla | ❌ No empezado. |
 
-**Nada de esto se ejecutó nunca contra datos reales.** Compila, pasa lint y los 26 tests, pero todo lo que lee o escribe en la base está sin verificar hasta que exista `totalfit_dev`.
+### ✅ Base de datos local — resuelto
 
-### ⛔ Bloqueante: la base de datos local
+Corriendo en PostgreSQL 18 local, base `totalfit_dev`, rol dedicado `totalfit`. Migración aplicada (`20260819022858_init`) y seed ejecutado.
 
-No se pudo crear la base. Resumen de lo que pasó:
+**Cómo se llegó ahí** (queda registrado por si hay que repetirlo en otra máquina):
 
 1. Docker no está instalado → se descartó.
 2. La máquina ya tiene **PostgreSQL 18** corriendo como servicio (`postgresql-x64-18`, arranque automático, escuchando en 5432). Se decidió usar ese.
@@ -32,9 +44,22 @@ No se pudo crear la base. Resumen de lo que pasó:
 
 **Solución elegida:** en vez de cambiar la password del superusuario `postgres` (que rompería cualquier otra cosa que la use), se crea un **rol dedicado `totalfit`** dueño de la base `totalfit_dev`. El superusuario queda intacto y la app corre con permisos mínimos.
 
-**Lo que tiene que hacer Kevin:** abrir PowerShell **como Administrador** y correr el script que quedó en el scratchpad de la sesión (`crear-db-totalfit.ps1`). Hace backup de `pg_hba.conf`, lo pone en `trust` unos segundos, crea rol y base, y lo restaura en un bloque `finally` (o sea, la autenticación vuelve aunque algo falle). Termina imprimiendo `LISTO: totalfit@totalfit_dev`.
+Kevin corrió un script como Administrador que hizo backup de `pg_hba.conf`, lo puso en `trust` unos segundos, creó rol y base, y lo restauró. La password del superusuario `postgres` **sigue siendo desconocida** — si algún día hace falta, hay que repetir ese procedimiento.
 
-Ya está creado `.env.local` (gitignoreado) con todo lo demás resuelto: `AUTH_SECRET` generado, credenciales del admin del seed y `SEED_DATOS_DEMO=true`.
+`.env.local` (gitignoreado) tiene `AUTH_SECRET`, la conexión y las credenciales del seed.
+
+### Usuarios cargados hoy (datos de prueba)
+
+| DNI | Quién | Para qué |
+|---|---|---|
+| `20000001` | Kevin Admin | Tu usuario. **Cambiá el DNI por el real.** |
+| `20000002` | Fernando Profe | Alta de personal de prueba. Su contraseña se resetea desde /personal. |
+| `10000001` | Ana Verde | Socio al día → verde |
+| `10000002` | Bruno Amarillo | Vence en 3 días → amarillo |
+| `10000003` | Carla Roja | Venció hace 10 días → rojo |
+| `10000004` | Diego SinPagos | Nunca pagó → rojo |
+
+Las contraseñas del admin están en `.env.local`. **Todo esto hay que borrarlo antes de usar el sistema en serio.**
 
 ## Cómo levantar el proyecto
 
@@ -51,6 +76,7 @@ Rutas que ya existen:
 | `/mi-cuenta` | Portal del socio: consulta su cuota por DNI | Sí |
 | `/login` | Ingreso del personal (DNI + password) | Sí, para entrar |
 | `/dashboard` | Panel del dueño: contadores, caja del mes, morosos | Sí |
+| `/personal` | Alta de profes/empleados, reset de contraseña, baja | Sí |
 | `/socios` | Listado con búsqueda por DNI, nombre o apellido | Sí |
 | `/socios/nuevo` | Alta de socio | Sí |
 | `/socios/[id]` | Ficha: pagos, ingresos, registrar pago, dar de baja | Sí |
@@ -83,6 +109,8 @@ Otros comandos: `npm test` (16 tests), `npm run build`, `npm run lint`, `npm run
 ## Decisiones ABIERTAS
 - [ ] **¿Se prende la ventana de pago?** Ya está implementada pero **apagada** (`DIAS_DE_GRACIA=0`). Confirmar con el gimnasio cuántos días de tolerancia quieren y poner ese número. Ver sección propia más abajo.
 - [ ] **Repo en GitHub.** Hoy el repo es solo local. Falta `gh auth login` (es interactivo, lo tiene que correr Kevin) o crear el repo a mano y pasar la URL. Después: `main` protegida + el socio como colaborador.
+- [ ] **¿Hace falta un rol DUEÑO separado de EMPLEADO?** Hoy cualquier ADMIN puede dar de alta y de baja a otros. Para un gimnasio chico suele alcanzar, pero significa que un profe podría crear cuentas o desactivar a otro. Si Kevin quiere que solo el dueño toque `/personal`, hay que agregar un tercer rol al enum y una migración. Los candados anti-lockout ya están puestos igual.
+- [ ] **Borrar los datos de prueba** (`10000001` a `10000004`, `20000002`) antes de usar el sistema en serio, y cambiar el DNI del admin por el real.
 - [ ] **DNI en la migración.** La planilla no tiene DNI. Se resuelve al escribir el script de import.
 - [ ] **Días de vencimiento por tipo de pase.** Hoy ambos en 30. Confirmar con el gimnasio.
 - [ ] **Precios de los planes** para mostrar en la landing (hoy dice "consultanos en recepción").
@@ -131,7 +159,8 @@ También se agregaron `mensajeParaAdmin()` y `mensajeParaSocio()` en `src/lib/cu
 2. [x] **CRUD de socios:** listado con búsqueda, alta, ficha y baja lógica.
 3. [x] **Registro de pagos** con `fecha_vencimiento` autocalculada y `registrado_por` automático.
 4. [x] **Portal del cliente** (`/mi-cuenta`): consulta de cuota por DNI.
-5. [ ] **Claves para socios**, requisito para poder darles acceso a la rutina.
+5. [x] **Gestión del personal:** alta de profes/empleados con contraseña, reset de contraseña y baja, con candados anti-lockout.
+6. [ ] **Claves para socios**, requisito para poder darles acceso a la rutina.
 6. [ ] **Carga y descarga de rutinas** a Supabase Storage.
 7. [ ] **Listado de asistencias** (solo lectura).
 8. [ ] **Script de importación** de la planilla, con limpieza de datos.
@@ -144,6 +173,8 @@ También se agregaron `mensajeParaAdmin()` y `mensajeParaSocio()` en `src/lib/cu
 - La landing tiene los datos del gimnasio hardcodeados. Si el dueño los quiere editar solo, hay que sacarlos a la base.
 
 ## Bitácora
+- **19/08/2026** — **Base andando y todo verificado.** Kevin corrió el script como Administrador; se creó el rol `totalfit` y la base `totalfit_dev`. Aplicada la migración inicial y ejecutado el seed. Verificado end-to-end contra datos reales: login del admin devuelve sesión con rol ADMIN; los 4 DNI demo dan verde/amarillo/rojo/rojo y un DNI inexistente da rojo; solo los dos que pasaron tienen fila en `Asistencia`; los tres pagos tienen admin asociado; un `INSERT` con DNI repetido es rechazado por `Usuario_dni_key`; un socio no puede loguearse al panel y una contraseña incorrecta no crea sesión.
+- **19/08/2026** — **Gestión del personal.** `/personal`: alta de profes y empleados con contraseña obligatoria (bcrypt 12 rondas), reset de contraseña y baja/reactivación. Dos candados contra quedarse afuera del sistema: nadie se da de baja a sí mismo y no se puede desactivar al último admin activo. El DNI es único para todo el sistema, así que si el profe ya está cargado como socio el alta lo dice en vez de duplicar la ficha. Probado creando a "Fernando Profe" y verificando que puede loguearse.
 - **19/08/2026** — **Panel del dueño y portal del cliente.** `/dashboard` con contadores derivados (se clasifica cada socio con `calcularEstadoCuota`, no se lee ningún campo guardado), cobrado del mes, ingresos del día y dos listas accionables: quién entra en período de pago y quién tiene que pagar. `/socios` con búsqueda por GET, alta con validación de DNI duplicado antes de que explote el índice unique, ficha con historial de pagos (incluye quién cobró cada uno), últimos ingresos, registro de pago y baja lógica. Todas las acciones pasan por `exigirAdmin()`, que saca el admin de la sesión del servidor; el formulario de pago no manda ni el admin ni el vencimiento — el vencimiento lo calcula el servidor con `calcularFechaVencimiento`. `/mi-cuenta` deja de ser 404: el socio consulta por DNI y ve el mensaje en tono amable, sin registrar asistencia y exponiendo solo nombre de pila, estado y vencimiento.
 - **19/08/2026** — **Ventana de pago.** Cuarto estado `EN_PERIODO_DE_PAGO` (naranja) en `src/lib/cuota.ts`, controlado por `DIAS_DE_GRACIA` y apagado por defecto. Mensajes separados para dueño y socio. Recepción muestra el panel naranja con los días que le quedan para renovar. Regla de Oro 2 de `CLAUDE.md` actualizada. 26 tests.
 - **19/08/2026** — **Página pública.** Landing del gimnasio en `/`, reemplazando la default de Next: hero, planes (lee las etiquetas de `src/lib/pases.ts`, no las duplica), horarios y footer con acceso del personal. Componente `Foto` que detecta si el archivo existe y muestra un marcador con el nombre que falta, así poner fotos no requiere tocar código. Descubierto que este shadcn está sobre **Base UI y no Radix**: no hay `asChild`, va `render={<Link/>}` (anotado en `CLAUDE.md` §10).
