@@ -114,6 +114,8 @@ export function TarjetaSocio({ socio }: { socio: SocioConCuota }) {
         usuarioId={socio.id}
         tienePagoAnterior={socio.ultimoPago !== null}
         nombre={socio.nombre}
+        montoSugerido={socio.ultimoPago?.monto}
+        tipoPaseSugerido={socio.ultimoPago?.tipo_pase}
       />
     </li>
   );

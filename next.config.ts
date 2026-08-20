@@ -2,13 +2,13 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   async redirects() {
-    // Antes había dos puertas separadas: /login para el personal y /mi-cuenta
-    // para los socios. Ahora es una sola, /ingresar. Se redirige en vez de
-    // borrarlas para no romper links viejos ni favoritos del navegador.
-    return [
-      { source: "/login", destination: "/ingresar", permanent: true },
-      { source: "/mi-cuenta", destination: "/ingresar", permanent: true },
-    ];
+    // El ingreso del personal era /login y ahora es /ingresar, la misma puerta
+    // que usan los socios. Se redirige en vez de borrarla para no romper links
+    // viejos ni favoritos del navegador.
+    //
+    // /mi-cuenta NO se redirige: es la pantalla del socio, y si no hay sesión
+    // ella misma manda a /ingresar.
+    return [{ source: "/login", destination: "/ingresar", permanent: true }];
   },
 };
 

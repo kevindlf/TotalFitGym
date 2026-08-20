@@ -75,7 +75,7 @@ Sede → Usuarios · Usuario(cliente) → Pagos · Usuario(cliente) → Asistenc
 - [x] **Vista planilla** de socios con filtros y cobro en un click.
 - [x] **Gestión del personal**: el admin da de alta a los profes/empleados que cobran.
 - [x] **Página pública** del gimnasio + puerta única de ingreso.
-- [x] **Portal cliente (mínimo)**: ver estado de su cuota.
+- [x] **Portal cliente**: pantalla propia con su cuota, su plan, sus pagos y sus ingresos.
 - [ ] **Descarga de rutina** por el socio. Requiere claves de socio: un archivo personal no puede quedar detrás de un dato tan adivinable como el DNI.
 - [ ] Carga de **rutina** por el admin (subir PDF/imagen a Supabase Storage).
 - [ ] Script de **importación** de la planilla actual (ver sección 7).
@@ -94,6 +94,7 @@ Estado real del proyecto (difiere del plan original: `/prisma` va en la raíz po
   /app
     page.tsx               # landing pública del gimnasio
     /(auth)/ingresar       # PUERTA ÚNICA: socio con DNI, personal con DNI + password
+    /(cliente)/mi-cuenta   # portal del socio (cuota, pagos, ingresos, rutina)
     /(admin)               # layout con verificación de sesión ADMIN
       /dashboard           # contadores, caja del mes, morosos
       /socios              # vista planilla + alta + ficha del socio
@@ -103,8 +104,8 @@ Estado real del proyecto (difiere del plan original: `/prisma` va en la raíz po
       /auth  /recepcion
   /components
     /admin  /publico  /recepcion  /ui
-  /lib                     # prisma, auth, cuota, pases, socios, personal,
-                           # metricas, portal, recepcion, formato, gimnasio
+  /lib                     # prisma, auth, cuota, pases, socios, personal, metricas,
+                           # portal, recepcion, formato, gimnasio, sesion-socio
   /proxy.ts                # el "middleware" de Next 16
   /generated/prisma        # cliente generado (gitignoreado)
 ```
@@ -114,7 +115,8 @@ Estado real del proyecto (difiere del plan original: `/prisma` va en la raíz po
 | Ruta | Quién entra | Qué hace |
 |---|---|---|
 | `/` | Cualquiera | Landing: qué es el gimnasio, actividades, planes, horarios, ubicación |
-| `/ingresar` | Cualquiera | **Puerta única.** Con DNI solo → estado de cuota. Con DNI + password → panel |
+| `/ingresar` | Cualquiera | **Puerta única.** Con DNI solo → portal del socio. Con DNI + password → panel |
+| `/mi-cuenta` | Socio (cookie firmada) | Su cuota, su plan, sus pagos, sus ingresos y —más adelante— su rutina |
 | `/dashboard` | ADMIN | Contadores derivados, cobrado del mes, morosos, próximos a vencer |
 | `/socios` | ADMIN | Vista planilla con filtros y cobro en un click |
 | `/socios/[id]` | ADMIN | Ficha: pagos con quién cobró, ingresos, registrar pago, baja lógica |
@@ -145,6 +147,7 @@ Planilla "Asistencia socios junin": Nombre, Plan, Monto, Medio de pago, Fecha de
 - **El color nunca comunica solo.** Cada estado lleva además ícono o texto: la pantalla de la puerta se lee de lejos y de reojo, y un recepcionista daltónico tiene que poder usarla.
 - **Acciones de servidor con `(estadoPrevio, formData)`**, no envueltas en closures. Así Next les da progressive enhancement y siguen andando si el JavaScript no cargó — cosa que importa en la PC del mostrador.
 - **Los datos del gimnasio** (dirección, teléfono, horarios, actividades, qué incluye cada plan) viven en `src/lib/gimnasio.ts`. Cambian dos veces por año y no justifican una tabla ni una pantalla de administración.
+- **El socio nunca viaja en la URL.** Su sesión es una cookie `httpOnly` firmada con HMAC (`src/lib/sesion-socio.ts`), no un DNI en el path: una URL se comparte, queda en el historial y se filtra por el `Referer`. Cuando existan contraseñas de socio, eso se reemplaza por NextAuth.
 
 ## 10. Notas de versiones (Fase 1)
 

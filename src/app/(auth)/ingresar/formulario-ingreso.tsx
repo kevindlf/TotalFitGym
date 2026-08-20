@@ -5,19 +5,11 @@ import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { EstadoCuota } from "@/lib/cuota";
 import { cn } from "@/lib/utils";
 
 import { ingresar, type EstadoIngreso } from "./acciones";
 
 const ESTADO_INICIAL: EstadoIngreso = {};
-
-const COLORES: Record<EstadoCuota, string> = {
-  ACTIVO: "border-emerald-500/40 bg-emerald-500/10",
-  PROXIMO_A_VENCER: "border-amber-500/40 bg-amber-500/10",
-  EN_PERIODO_DE_PAGO: "border-orange-500/40 bg-orange-500/10",
-  VENCIDO: "border-red-500/40 bg-red-500/10",
-};
 
 // Inputs altos: se usan sobre todo desde el celular, con el pulgar.
 const CLASE_INPUT =
@@ -121,26 +113,6 @@ export function FormularioIngreso() {
         >
           {estado.error}
         </p>
-      ) : null}
-
-      {estado.cuota ? (
-        <div
-          role="status"
-          className={cn(
-            "space-y-2 rounded-xl border p-5 sm:p-6",
-            COLORES[estado.cuota.estado],
-          )}
-        >
-          <p className="text-2xl font-semibold">Hola, {estado.cuota.nombre}</p>
-          <p className="text-lg text-pretty">{estado.cuota.mensaje}</p>
-
-          {estado.cuota.cuentaDadaDeBaja ? (
-            <p className="text-sm text-neutral-400">
-              Tu cuenta figura dada de baja. Acercate a recepción para
-              reactivarla.
-            </p>
-          ) : null}
-        </div>
       ) : null}
     </div>
   );

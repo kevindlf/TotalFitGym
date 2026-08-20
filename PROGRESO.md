@@ -25,7 +25,7 @@ También verificado en el login: un socio (rol CLIENTE) **no puede** entrar al p
 | Dashboard del dueño | ✅ Hecho y probado. |
 | Socios — vista planilla | ✅ Filtros, estado al costado, cobro en un click. |
 | Registro de pagos | ✅ Hecho y probado. |
-| Portal del cliente | ✅ Consulta de cuota por DNI. |
+| Portal del cliente | ✅ Pantalla propia con cuota, plan, pagos e ingresos. |
 | Personal (alta de profes/empleados) | ✅ Hecho y probado. |
 | Responsive / mobile | ✅ Tarjetas en celular, tabla en escritorio. |
 | Rutinas (subir/descargar) | ❌ No empezado. Necesita Supabase + claves de socio. |
@@ -79,6 +79,7 @@ Rutas que ya existen:
 |---|---|---|
 | `/` | Landing: gimnasio, actividades, planes, horarios, ubicación | No |
 | `/ingresar` | **Puerta única.** Socio con DNI · personal con DNI + contraseña | Sí |
+| `/mi-cuenta` | Pantalla del socio: cuota, plan, pagos, ingresos, rutina | Sí |
 | `/dashboard` | Panel del dueño: contadores, caja del mes, morosos | Sí |
 | `/personal` | Alta de profes/empleados, reset de contraseña, baja | Sí |
 | `/socios` | Vista planilla: filtros, estado al costado, cobro en un click | Sí |
@@ -86,12 +87,12 @@ Rutas que ya existen:
 | `/socios/[id]` | Ficha: pagos, ingresos, registrar pago, dar de baja | Sí |
 | `/recepcion` | Pantalla de puerta | Sí |
 
-Otros comandos: `npm test` (16 tests), `npm run build`, `npm run lint`, `npm run db:studio` (ver la base), `npm run db:seed`.
+Otros comandos: `npm test` (32 tests), `npm run build`, `npm run lint`, `npm run db:studio` (ver la base), `npm run db:seed`.
 
 ## Decisiones ya tomadas
 - **Stack:** Next.js 16 (App Router) + **PostgreSQL + Prisma 7** + NextAuth v5 + Tailwind v4/shadcn. Archivos de rutina en Supabase Storage. Deploy en Vercel + Supabase.
 - **Rutina del cliente:** el admin/profe **sube un archivo (PDF/imagen)** y el socio lo ve/descarga. Editor estructurado de ejercicios = fase posterior.
-- **Portal cliente en v1:** SÍ, versión mínima (ver estado de cuota + descargar rutina).
+- **Portal cliente en v1:** SÍ. El socio entra con su DNI y tiene su propia pantalla; la descarga de rutina queda para cuando tenga contraseña.
 - **Umbral "próximo a vencer":** 7 días (configurable vía `DIAS_PROXIMO_A_VENCER`).
 - **Alcance de sedes:** un gimnasio con varias **sedes**. Vender a otros gimnasios = fase posterior.
 - **Estado de cuota derivado:** se calcula desde `fecha_vencimiento`, no se guarda.
@@ -107,7 +108,7 @@ Otros comandos: `npm test` (16 tests), `npm run build`, `npm run lint`, `npm run
 - **Zona horaria fija** `America/Argentina/Buenos_Aires`: un pase que vence hoy es ACTIVO todo el día.
 - **Socio con cuenta INACTIVA → rojo**, aunque le quede cuota paga. ⚠️ No está en `CLAUDE.md`: confirmar.
 - **El vencimiento que manda es el más lejano**, no el del último pago cargado.
-- **Página pública:** horarios, planes y contacto hardcodeados en `src/app/page.tsx`. Las fotos se ponen copiando archivos a `public/fotos/` (`portada.jpg` y `sala.jpg`), sin tocar código.
+- **Página pública:** los datos del gimnasio viven en `src/lib/gimnasio.ts`. Las fotos se ponen copiando archivos a `public/fotos/` (`portada.jpg`, `sala.jpg` y `frente.jpg`), sin tocar código.
 - **Cloudinary: NO.** Para las fotos de la landing alcanza con `public/`, y para las rutinas ya está Supabase Storage. Sumar un tercer servicio no aporta nada.
 
 ## Decisiones ABIERTAS
@@ -179,6 +180,7 @@ También se agregaron `mensajeParaAdmin()` y `mensajeParaSocio()` en `src/lib/cu
 - La landing tiene los datos del gimnasio hardcodeados. Si el dueño los quiere editar solo, hay que sacarlos a la base.
 
 ## Bitácora
+- **19/08/2026** — **Cobro desde la planilla y pantalla propia del socio.** El botón de cobrar ahora sirve también para el socio que nunca pagó: si no hay pago anterior del cual copiar, abre un formulario corto ahí mismo (monto, plan, método) en vez de mandar a la ficha. El alta de socio suma un bloque opcional de primer pago, porque lo normal es que el socio pague el mismo día que se anota. Sin pagos parciales: en el gimnasio se paga todo o no se paga. **`/mi-cuenta` pasa a ser una pantalla completa** — antes era un cuadrito dentro del formulario de ingreso — con la cuota, el plan, el historial de pagos, los ingresos al gimnasio y el lugar ya reservado para la rutina. El socio se identifica con una **cookie firmada con HMAC** (`src/lib/sesion-socio.ts`) y no con el DNI en la URL, que se comparte y queda en el historial. Verificado con tres cookies: la válida entra, una con el id cambiado se rechaza y una vencida también.
 - **19/08/2026** — **Tres correcciones sobre el panel.** (1) **Bug de ingreso, corregido:** el campo de contraseña se ocultaba con CSS pero seguía en el DOM, así que se enviaba igual; bastaba que el navegador lo autocompletara para que un socio terminara pidiendo un login de admin y recibiera "DNI o contraseña incorrectos" sin entender por qué. Ahora el campo no se renderiza cuando el perfil es socio. (2) **Historial de pagos desplegable** desde la planilla, en la tabla y en las tarjetas del celular. Se carga a pedido con una server action: con 349 socios y un pago por mes, traerlo junto al listado serían miles de filas viajando para mostrar, casi siempre, ninguna. (3) **Recepción sale del menú del panel** y pasa a abrirse con un botón desde el dashboard. No se borró: es la pantalla de la PC de la puerta, la única que registra asistencias (Regla 3) y la que decide el acceso (Regla 2). Lo que sobraba era tenerla como sección de administración, donde el mismo dato se consulta mejor en `/socios`.
 - **19/08/2026** — **Repo publicado y limpio.** El proyecto está en `github.com/kevindlf/TotalFitGym`, rama `main`. Antes del primer push se escaneó el historial buscando secretos: apareció la contraseña de una cuenta de prueba escrita en este mismo archivo, en tres commits. Se reescribió el historial con `git filter-branch` para sacarla y se rotó igual esa contraseña en la base, porque una credencial expuesta se rota aunque se borre el rastro. Verificado que ya no aparece en ningún commit ni en el remoto, que los 18 commits siguen enteros y que el código quedó idéntico. Queda una rama local `respaldo-antes-de-limpiar` (nunca se sube) por si hiciera falta volver. Agregado un README con el arranque, las Reglas de Oro y el flujo de ramas.
 - **19/08/2026** — **Landing profesional, mobile-first y puerta única.** La página pública pasa de cuatro secciones sueltas a una landing completa: hero, qué vas a encontrar, planes con lo que incluye cada uno, horarios, ubicación con teléfono/Instagram/mail, y cierre. Barra superior fija con el botón de ingresar siempre a un toque. Todos los datos salen ahora de `src/lib/gimnasio.ts`, con los provisorios marcados `REVISAR`. `/ingresar` gana un selector "Soy socio / Trabajo acá" para que el formulario sea una sola pregunta por vez. **Mobile-first como convención del proyecto** (`CLAUDE.md` §9): la vista planilla de socios se convierte en tarjetas apiladas en el celular y queda como tabla solo de `md:` para arriba — ocho columnas en un teléfono obligaban a scrollear de costado para leer un solo socio. Nota de versión: lucide v1 sacó los íconos de marcas, así que Instagram se dibuja con `AtSign`.

@@ -4,13 +4,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-import { repetirUltimoPago } from "./acciones";
+import { registrarPago, repetirUltimoPago } from "./acciones";
 
 vi.mock("@/lib/auth", () => ({ auth: vi.fn() }));
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     pago: { findFirst: vi.fn(), create: vi.fn() },
+    usuario: { findFirst: vi.fn(), findUnique: vi.fn(), create: vi.fn() },
   },
 }));
 
@@ -25,6 +26,7 @@ vi.mock("next/navigation", () => ({
 const sesion = vi.mocked(auth);
 const buscarPago = vi.mocked(prisma.pago.findFirst);
 const crearPago = vi.mocked(prisma.pago.create);
+const buscarUsuario = vi.mocked(prisma.usuario.findFirst);
 
 const ADMIN = { user: { id: "admin_1", rol: "ADMIN" } };
 
@@ -96,6 +98,50 @@ describe("repetirUltimoPago", () => {
       "redirigido a /ingresar",
     );
 
+    expect(crearPago).not.toHaveBeenCalled();
+  });
+});
+
+// El primer pago de un socio recién dado de alta se carga desde la planilla,
+// sin pedir fecha: siempre es hoy.
+describe("registrarPago sin fecha", () => {
+  function formularioDePago() {
+    const datos = new FormData();
+    datos.set("usuario_id", "socio_nuevo");
+    datos.set("monto", "45000");
+    datos.set("tipo_pase", "MEDIO");
+    datos.set("metodo_pago", "EFECTIVO");
+
+    return datos;
+  }
+
+  it("toma la fecha de hoy y calcula el vencimiento en el servidor", async () => {
+    buscarUsuario.mockResolvedValue({ id: "socio_nuevo" } as never);
+
+    const resultado = await registrarPago({}, formularioDePago());
+
+    expect(resultado.ok).toMatch(/vence el \d{2}\/\d{2}\/\d{4}/);
+
+    const { data } = crearPago.mock.calls[0]![0] as {
+      data: Record<string, unknown>;
+    };
+
+    expect(startOfDay(data.fecha_pago as Date)).toEqual(startOfDay(new Date()));
+    expect(startOfDay(data.fecha_vencimiento as Date)).toEqual(
+      startOfDay(addDays(new Date(), 30)),
+    );
+    expect(data.registrado_por).toBe("admin_1");
+  });
+
+  it("no acepta un monto en cero ni negativo", async () => {
+    buscarUsuario.mockResolvedValue({ id: "socio_nuevo" } as never);
+
+    const datos = formularioDePago();
+    datos.set("monto", "0");
+
+    const resultado = await registrarPago({}, datos);
+
+    expect(resultado.error).toContain("mayor a cero");
     expect(crearPago).not.toHaveBeenCalled();
   });
 });

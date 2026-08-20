@@ -1,15 +1,14 @@
 "use server";
 
 import { AuthError } from "next-auth";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { signIn } from "@/lib/auth";
-import { consultarCuotaPorDni, type ConsultaDeCuota } from "@/lib/portal";
+import { buscarSocioPorDni } from "@/lib/portal";
+import { crearSesionDelSocio } from "@/lib/sesion-socio";
 
-export type EstadoIngreso = {
-  error?: string;
-  cuota?: ConsultaDeCuota;
-};
+export type EstadoIngreso = { error?: string };
 
 const esquema = z.object({
   dni: z
@@ -22,9 +21,8 @@ const esquema = z.object({
 /**
  * Puerta única del sistema.
  *
- * Un solo formulario para todos: se entra con el DNI. Si además se completa la
- * contraseña, se intenta el ingreso como personal y se abre el panel; si se
- * deja vacía, se muestra el estado de cuota del socio.
+ * Con DNI solo, el socio entra a su propia pantalla. Con DNI y contraseña, el
+ * personal entra al panel.
  *
  * Se decide por lo que la persona escribió y no por lo que el DNI "es": así la
  * pantalla nunca revela si un DNI pertenece al personal o a un socio.
@@ -59,22 +57,28 @@ export async function ingresar(
     }
   }
 
+  let socio: { id: string } | null;
+
   try {
-    const cuota = await consultarCuotaPorDni(dni);
-
-    if (!cuota) {
-      return {
-        error:
-          "No encontramos ese DNI. Si sos socio, acercate a recepción para que lo carguen.",
-      };
-    }
-
-    return { cuota };
+    socio = await buscarSocioPorDni(dni);
   } catch (error) {
-    console.error("Falló la consulta de cuota:", error);
+    console.error("Falló la búsqueda del socio:", error);
 
     return {
       error: "No pudimos consultar tu cuota ahora. Probá de nuevo en un rato.",
     };
   }
+
+  if (!socio) {
+    return {
+      error:
+        "No encontramos ese DNI. Si sos socio, acercate a recepción para que lo carguen.",
+    };
+  }
+
+  // La sesión se guarda en una cookie firmada en vez de mandar el DNI en la
+  // URL: una URL se comparte, queda en el historial y viaja en el `Referer`.
+  await crearSesionDelSocio(socio.id);
+
+  redirect("/mi-cuenta");
 }

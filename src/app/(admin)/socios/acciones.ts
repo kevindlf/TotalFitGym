@@ -45,7 +45,7 @@ export async function crearSocio(
   _estadoPrevio: EstadoFormulario,
   formData: FormData,
 ): Promise<EstadoFormulario> {
-  await exigirAdmin();
+  const adminId = await exigirAdmin();
 
   const parseado = esquemaSocio.safeParse({
     dni: formData.get("dni"),
@@ -89,6 +89,41 @@ export async function crearSocio(
     select: { id: true },
   });
 
+  // Lo normal es que el socio pague el mismo día que se da de alta, así que el
+  // formulario deja cargar el primer pago acá y evitar la segunda pantalla. Si
+  // se deja el monto vacío, el socio queda creado sin pagos y en rojo hasta que
+  // se le cobre.
+  const monto = formData.get("monto");
+
+  if (monto) {
+    const pago = esquemaPago.safeParse({
+      usuario_id: socio.id,
+      monto,
+      fecha_pago: undefined,
+      tipo_pase: formData.get("tipo_pase"),
+      metodo_pago: formData.get("metodo_pago"),
+    });
+
+    if (pago.success) {
+      const fechaPago = new Date();
+
+      await prisma.pago.create({
+        data: {
+          usuario_id: socio.id,
+          monto: pago.data.monto.toFixed(2),
+          fecha_pago: fechaPago,
+          fecha_vencimiento: calcularFechaVencimiento(
+            fechaPago,
+            pago.data.tipo_pase,
+          ),
+          tipo_pase: pago.data.tipo_pase,
+          metodo_pago: pago.data.metodo_pago,
+          registrado_por: adminId,
+        },
+      });
+    }
+  }
+
   revalidatePath("/socios");
   revalidatePath("/dashboard");
   redirect(`/socios/${socio.id}`);
@@ -100,7 +135,9 @@ const esquemaPago = z.object({
     .number()
     .positive("El monto tiene que ser mayor a cero.")
     .max(99_999_999, "Ese monto es demasiado grande."),
-  fecha_pago: z.coerce.date("La fecha de pago no es válida."),
+  // Opcional: cuando se cobra desde la planilla el pago es de hoy y no tiene
+  // sentido hacer elegir la fecha. En la ficha sí se puede cargar una vieja.
+  fecha_pago: z.coerce.date("La fecha de pago no es válida.").optional(),
   tipo_pase: z.enum(["MEDIO", "LIBRE"]),
   metodo_pago: z.enum(["EFECTIVO", "TRANSFERENCIA", "QR", "MERCADO_PAGO"]),
 });
@@ -111,10 +148,12 @@ export async function registrarPago(
 ): Promise<EstadoFormulario> {
   const adminId = await exigirAdmin();
 
+  const fechaEnviada = formData.get("fecha_pago");
+
   const parseado = esquemaPago.safeParse({
     usuario_id: formData.get("usuario_id"),
     monto: formData.get("monto"),
-    fecha_pago: formData.get("fecha_pago"),
+    fecha_pago: fechaEnviada || undefined,
     tipo_pase: formData.get("tipo_pase"),
     metodo_pago: formData.get("metodo_pago"),
   });
@@ -134,19 +173,18 @@ export async function registrarPago(
     return { error: "Ese socio no existe." };
   }
 
+  const fechaPago = datos.fecha_pago ?? new Date();
+
   // El vencimiento se calcula del lado del servidor a partir del tipo de pase.
   // No se acepta como campo del formulario: si no, cualquiera podría enviar un
   // vencimiento arbitrario.
-  const fechaVencimiento = calcularFechaVencimiento(
-    datos.fecha_pago,
-    datos.tipo_pase,
-  );
+  const fechaVencimiento = calcularFechaVencimiento(fechaPago, datos.tipo_pase);
 
   await prisma.pago.create({
     data: {
       usuario_id: socio.id,
       monto: datos.monto.toFixed(2),
-      fecha_pago: datos.fecha_pago,
+      fecha_pago: fechaPago,
       fecha_vencimiento: fechaVencimiento,
       tipo_pase: datos.tipo_pase,
       metodo_pago: datos.metodo_pago,

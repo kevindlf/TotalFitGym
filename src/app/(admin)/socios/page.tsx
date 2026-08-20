@@ -258,6 +258,8 @@ export default async function PaginaSocios({
                       usuarioId={socio.id}
                       tienePagoAnterior={socio.ultimoPago !== null}
                       nombre={socio.nombre}
+                      montoSugerido={socio.ultimoPago?.monto}
+                      tipoPaseSugerido={socio.ultimoPago?.tipo_pase}
                     />
                   </TableCell>
                 </TableRow>
