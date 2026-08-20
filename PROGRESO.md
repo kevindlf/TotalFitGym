@@ -11,10 +11,14 @@
 | Página pública (landing) | ✅ Hecha. Falta poner fotos reales. |
 | Login de admin | ✅ Hecho. Sin probar contra la base. |
 | Recepción (puerta) | ✅ Hecha. Sin probar contra la base. |
-| Panel admin (dashboard, socios, pagos) | ❌ No empezado — Fase 2. |
-| Portal del cliente | ❌ No empezado — Fase 2. |
-| Rutinas (subir/descargar) | ❌ No empezado — Fase 2. |
-| Import de la planilla | ❌ No empezado — Fase 2. |
+| Dashboard del dueño | ✅ Hecho. Sin probar contra la base. |
+| Socios (listado, alta, ficha, baja) | ✅ Hecho. Sin probar contra la base. |
+| Registro de pagos | ✅ Hecho. Sin probar contra la base. |
+| Portal del cliente (consulta por DNI) | ✅ Hecho. Sin probar contra la base. |
+| Rutinas (subir/descargar) | ❌ No empezado. Necesita Supabase + claves de socio. |
+| Import de la planilla | ❌ No empezado. |
+
+**Nada de esto se ejecutó nunca contra datos reales.** Compila, pasa lint y los 26 tests, pero todo lo que lee o escribe en la base está sin verificar hasta que exista `totalfit_dev`.
 
 ### ⛔ Bloqueante: la base de datos local
 
@@ -44,9 +48,13 @@ Rutas que ya existen:
 | Ruta | Qué es | Necesita base |
 |---|---|---|
 | `/` | Página pública del gimnasio | No |
+| `/mi-cuenta` | Portal del socio: consulta su cuota por DNI | Sí |
 | `/login` | Ingreso del personal (DNI + password) | Sí, para entrar |
-| `/recepcion` | Pantalla de puerta. Redirige a `/login` sin sesión | Sí |
-| `/mi-cuenta` | Portal del socio | **Todavía no existe** |
+| `/dashboard` | Panel del dueño: contadores, caja del mes, morosos | Sí |
+| `/socios` | Listado con búsqueda por DNI, nombre o apellido | Sí |
+| `/socios/nuevo` | Alta de socio | Sí |
+| `/socios/[id]` | Ficha: pagos, ingresos, registrar pago, dar de baja | Sí |
+| `/recepcion` | Pantalla de puerta | Sí |
 
 Otros comandos: `npm test` (16 tests), `npm run build`, `npm run lint`, `npm run db:studio` (ver la base), `npm run db:seed`.
 
@@ -119,21 +127,24 @@ También se agregaron `mensajeParaAdmin()` y `mensajeParaSocio()` en `src/lib/cu
 - [ ] **7. Verificación end-to-end.** ⛔ Bloqueado por la base.
 
 ## Fase 2 — el resto del MVP
-1. [ ] **Dashboard del dueño:** contadores activos/próximos/vencidos, cobros del mes, morosos, quién entra en período de pago esta semana.
-2. [ ] **CRUD de socios** (Usuario rol CLIENTE).
-3. [ ] **Registro de pagos** con `fecha_vencimiento` autocalculada y `registrado_por` automático.
-4. [ ] **Portal del cliente** (`/mi-cuenta`): estado de cuota, aviso de pago y descarga de rutina.
-5. [ ] **Carga de rutinas** a Supabase Storage.
-6. [ ] **Listado de asistencias** (solo lectura).
-7. [ ] **Script de importación** de la planilla, con limpieza de datos.
-8. [ ] **Repo en GitHub** con `main` protegida + el socio como colaborador.
-9. [ ] **Deploy** en Vercel + Supabase.
+1. [x] **Dashboard del dueño:** contadores derivados, cobros del mes, morosos, quién entra en período de pago.
+2. [x] **CRUD de socios:** listado con búsqueda, alta, ficha y baja lógica.
+3. [x] **Registro de pagos** con `fecha_vencimiento` autocalculada y `registrado_por` automático.
+4. [x] **Portal del cliente** (`/mi-cuenta`): consulta de cuota por DNI.
+5. [ ] **Claves para socios**, requisito para poder darles acceso a la rutina.
+6. [ ] **Carga y descarga de rutinas** a Supabase Storage.
+7. [ ] **Listado de asistencias** (solo lectura).
+8. [ ] **Script de importación** de la planilla, con limpieza de datos.
+9. [ ] **Editar datos** de un socio ya cargado (hoy solo se puede crear y dar de baja).
+10. [ ] **Repo en GitHub** con `main` protegida + el socio como colaborador.
+11. [ ] **Deploy** en Vercel + Supabase.
 
 ## Deuda técnica anotada
 - `npm audit`: 3 vulnerabilidades **high** en `deepmerge-ts`, que entra por `@prisma/config` → `prisma` (CLI). Es cadena de **devDependency**, no llega al runtime. El fix automático baja a Prisma 6 (breaking). Se revisa cuando Prisma publique el bump.
 - La landing tiene los datos del gimnasio hardcodeados. Si el dueño los quiere editar solo, hay que sacarlos a la base.
 
 ## Bitácora
+- **19/08/2026** — **Panel del dueño y portal del cliente.** `/dashboard` con contadores derivados (se clasifica cada socio con `calcularEstadoCuota`, no se lee ningún campo guardado), cobrado del mes, ingresos del día y dos listas accionables: quién entra en período de pago y quién tiene que pagar. `/socios` con búsqueda por GET, alta con validación de DNI duplicado antes de que explote el índice unique, ficha con historial de pagos (incluye quién cobró cada uno), últimos ingresos, registro de pago y baja lógica. Todas las acciones pasan por `exigirAdmin()`, que saca el admin de la sesión del servidor; el formulario de pago no manda ni el admin ni el vencimiento — el vencimiento lo calcula el servidor con `calcularFechaVencimiento`. `/mi-cuenta` deja de ser 404: el socio consulta por DNI y ve el mensaje en tono amable, sin registrar asistencia y exponiendo solo nombre de pila, estado y vencimiento.
 - **19/08/2026** — **Ventana de pago.** Cuarto estado `EN_PERIODO_DE_PAGO` (naranja) en `src/lib/cuota.ts`, controlado por `DIAS_DE_GRACIA` y apagado por defecto. Mensajes separados para dueño y socio. Recepción muestra el panel naranja con los días que le quedan para renovar. Regla de Oro 2 de `CLAUDE.md` actualizada. 26 tests.
 - **19/08/2026** — **Página pública.** Landing del gimnasio en `/`, reemplazando la default de Next: hero, planes (lee las etiquetas de `src/lib/pases.ts`, no las duplica), horarios y footer con acceso del personal. Componente `Foto` que detecta si el archivo existe y muestra un marcador con el nombre que falta, así poner fotos no requiere tocar código. Descubierto que este shadcn está sobre **Base UI y no Radix**: no hay `asChild`, va `render={<Link/>}` (anotado en `CLAUDE.md` §10).
 - **19/08/2026** — **Pasos 5 y 6.** Auth de admin con NextAuth v5 (DNI + password, solo rol ADMIN activo), config partida en `auth.config.ts` (edge-safe, la usa `proxy.ts`) y `auth.ts` (Prisma + bcrypt). Mensaje de error único y comparación contra un hash descartable cuando el DNI no existe, para no filtrar por tiempo de respuesta qué socios están registrados. Seed idempotente del primer admin desde variables de entorno. Pantalla de recepción con `src/lib/recepcion.ts` como lógica de puerta (reusa `calcularEstadoCuota`, no la duplica), API `POST /api/recepcion` que verifica sesión ADMIN server-side, y panel verde/amarillo/rojo con ícono y texto además del color. 8 tests con Prisma mockeado verifican que ningún rechazo escriba en la bitácora.
