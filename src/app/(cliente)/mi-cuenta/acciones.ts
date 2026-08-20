@@ -26,7 +26,20 @@ export async function consultarMiCuota(
     return { error: parseado.error.issues[0]?.message };
   }
 
-  const resultado = await consultarCuotaPorDni(parseado.data.dni);
+  let resultado: ConsultaDeCuota | null;
+
+  try {
+    resultado = await consultarCuotaPorDni(parseado.data.dni);
+  } catch (error) {
+    // Que la base esté caída no es culpa del socio: se le muestra algo
+    // entendible en vez de una pantalla de error.
+    console.error("Falló la consulta de cuota:", error);
+
+    return {
+      error:
+        "No pudimos consultar tu cuota en este momento. Probá de nuevo en un rato.",
+    };
+  }
 
   if (!resultado) {
     return {
