@@ -19,14 +19,15 @@ También verificado en el login: un socio (rol CLIENTE) **no puede** entrar al p
 
 | Superficie | Estado |
 |---|---|
-| Página pública (landing) | ✅ Hecha. Falta poner fotos reales. |
-| Login de admin | ✅ Hecho. Sin probar contra la base. |
-| Recepción (puerta) | ✅ Hecha. Sin probar contra la base. |
-| Dashboard del dueño | ✅ Hecho. Sin probar contra la base. |
-| Socios (listado, alta, ficha, baja) | ✅ Hecho. Sin probar contra la base. |
-| Registro de pagos | ✅ Hecho. Sin probar contra la base. |
-| Portal del cliente (consulta por DNI) | ✅ Hecho y probado. |
+| Página pública (`/`) | ✅ Landing completa. Faltan las fotos y los datos reales. |
+| Ingreso unificado (`/ingresar`) | ✅ Socio con DNI, personal con DNI + contraseña. |
+| Recepción (puerta) | ✅ Hecha y probada. |
+| Dashboard del dueño | ✅ Hecho y probado. |
+| Socios — vista planilla | ✅ Filtros, estado al costado, cobro en un click. |
+| Registro de pagos | ✅ Hecho y probado. |
+| Portal del cliente | ✅ Consulta de cuota por DNI. |
 | Personal (alta de profes/empleados) | ✅ Hecho y probado. |
+| Responsive / mobile | ✅ Tarjetas en celular, tabla en escritorio. |
 | Rutinas (subir/descargar) | ❌ No empezado. Necesita Supabase + claves de socio. |
 | Import de la planilla | ❌ No empezado. |
 
@@ -72,12 +73,11 @@ Rutas que ya existen:
 
 | Ruta | Qué es | Necesita base |
 |---|---|---|
-| `/` | Página pública del gimnasio | No |
-| `/mi-cuenta` | Portal del socio: consulta su cuota por DNI | Sí |
-| `/login` | Ingreso del personal (DNI + password) | Sí, para entrar |
+| `/` | Landing: gimnasio, actividades, planes, horarios, ubicación | No |
+| `/ingresar` | **Puerta única.** Socio con DNI · personal con DNI + contraseña | Sí |
 | `/dashboard` | Panel del dueño: contadores, caja del mes, morosos | Sí |
 | `/personal` | Alta de profes/empleados, reset de contraseña, baja | Sí |
-| `/socios` | Listado con búsqueda por DNI, nombre o apellido | Sí |
+| `/socios` | Vista planilla: filtros, estado al costado, cobro en un click | Sí |
 | `/socios/nuevo` | Alta de socio | Sí |
 | `/socios/[id]` | Ficha: pagos, ingresos, registrar pago, dar de baja | Sí |
 | `/recepcion` | Pantalla de puerta | Sí |
@@ -113,8 +113,10 @@ Otros comandos: `npm test` (16 tests), `npm run build`, `npm run lint`, `npm run
 - [ ] **Borrar los datos de prueba** (`10000001` a `10000004`, `20000002`) antes de usar el sistema en serio, y cambiar el DNI del admin por el real.
 - [ ] **DNI en la migración.** La planilla no tiene DNI. Se resuelve al escribir el script de import.
 - [ ] **Días de vencimiento por tipo de pase.** Hoy ambos en 30. Confirmar con el gimnasio.
-- [ ] **Precios de los planes** para mostrar en la landing (hoy dice "consultanos en recepción").
-- [ ] **Datos reales del gimnasio:** dirección exacta, teléfono, horarios, redes.
+- [ ] **Datos reales del gimnasio.** `src/lib/gimnasio.ts` tiene marcados con `REVISAR` la dirección, el teléfono, el WhatsApp, el Instagram y el mail — hoy son provisorios. **Hay que cambiarlos antes de mostrarle esto a alguien.**
+- [ ] **Fotos del gimnasio.** Copiar tres archivos a `public/fotos/`: `portada.jpg`, `sala.jpg` y `frente.jpg`. Aparecen solas, sin tocar código. Mientras tanto se ve un bloque diseñado, no una imagen rota.
+- [ ] **Precios de los planes** para mostrar en la landing (hoy dice "consultanos por WhatsApp o en recepción").
+- [ ] **Qué era "no entregado".** Kevin mencionó ese estado; se interpretó como el socio que nunca pagó ("Sin pagos"). Si se refería a la **rutina no entregada**, es una columna aparte.
 - [ ] **Si el socio exige MongoDB.** _Nota: Prisma 7 ya no tiene conector MongoDB._
 
 ## Ventana de pago mensual — ✅ implementada, apagada por defecto
@@ -173,6 +175,8 @@ También se agregaron `mensajeParaAdmin()` y `mensajeParaSocio()` en `src/lib/cu
 - La landing tiene los datos del gimnasio hardcodeados. Si el dueño los quiere editar solo, hay que sacarlos a la base.
 
 ## Bitácora
+- **19/08/2026** — **Landing profesional, mobile-first y puerta única.** La página pública pasa de cuatro secciones sueltas a una landing completa: hero, qué vas a encontrar, planes con lo que incluye cada uno, horarios, ubicación con teléfono/Instagram/mail, y cierre. Barra superior fija con el botón de ingresar siempre a un toque. Todos los datos salen ahora de `src/lib/gimnasio.ts`, con los provisorios marcados `REVISAR`. `/ingresar` gana un selector "Soy socio / Trabajo acá" para que el formulario sea una sola pregunta por vez. **Mobile-first como convención del proyecto** (`CLAUDE.md` §9): la vista planilla de socios se convierte en tarjetas apiladas en el celular y queda como tabla solo de `md:` para arriba — ocho columnas en un teléfono obligaban a scrollear de costado para leer un solo socio. Nota de versión: lucide v1 sacó los íconos de marcas, así que Instagram se dibuja con `AtSign`.
+- **19/08/2026** — **Planilla editable y unificación del ingreso.** `/socios` pasa a ser la planilla que el gimnasio ya sabe leer, con filtros rápidos, la fila pintada según el estado, el vocabulario viejo (Pagado / Por vencer / Falta pagar / Sin pagos) y el botón "Pagó" que repite el último pago en un click. `repetirUltimoPago` recibe `(estadoPrevio, formData)` y no un closure, para recuperar el progressive enhancement. Se unifican `/login` y `/mi-cuenta` en `/ingresar`, con redirects para no romper links.
 - **19/08/2026** — **Base andando y todo verificado.** Kevin corrió el script como Administrador; se creó el rol `totalfit` y la base `totalfit_dev`. Aplicada la migración inicial y ejecutado el seed. Verificado end-to-end contra datos reales: login del admin devuelve sesión con rol ADMIN; los 4 DNI demo dan verde/amarillo/rojo/rojo y un DNI inexistente da rojo; solo los dos que pasaron tienen fila en `Asistencia`; los tres pagos tienen admin asociado; un `INSERT` con DNI repetido es rechazado por `Usuario_dni_key`; un socio no puede loguearse al panel y una contraseña incorrecta no crea sesión.
 - **19/08/2026** — **Gestión del personal.** `/personal`: alta de profes y empleados con contraseña obligatoria (bcrypt 12 rondas), reset de contraseña y baja/reactivación. Dos candados contra quedarse afuera del sistema: nadie se da de baja a sí mismo y no se puede desactivar al último admin activo. El DNI es único para todo el sistema, así que si el profe ya está cargado como socio el alta lo dice en vez de duplicar la ficha. Probado creando a "Fernando Profe" y verificando que puede loguearse.
 - **19/08/2026** — **Panel del dueño y portal del cliente.** `/dashboard` con contadores derivados (se clasifica cada socio con `calcularEstadoCuota`, no se lee ningún campo guardado), cobrado del mes, ingresos del día y dos listas accionables: quién entra en período de pago y quién tiene que pagar. `/socios` con búsqueda por GET, alta con validación de DNI duplicado antes de que explote el índice unique, ficha con historial de pagos (incluye quién cobró cada uno), últimos ingresos, registro de pago y baja lógica. Todas las acciones pasan por `exigirAdmin()`, que saca el admin de la sesión del servidor; el formulario de pago no manda ni el admin ni el vencimiento — el vencimiento lo calcula el servidor con `calcularFechaVencimiento`. `/mi-cuenta` deja de ser 404: el socio consulta por DNI y ve el mensaje en tono amable, sin registrar asistencia y exponiendo solo nombre de pila, estado y vencimiento.

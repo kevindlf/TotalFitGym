@@ -32,6 +32,8 @@ Escala real actual (planilla): ~349 socios (216 activos, 117 vencidos, 16 próxi
 ### USUARIO (clave de negocio = DNI)
 - `id` (PK técnica), `dni` (**único e irrepetible**, índice unique), `sede_id` (FK), `nombre`, `apellido`, `email`, `telefono`, `password` (obligatorio si ADMIN, nullable si CLIENTE), `rol` (ADMIN | CLIENTE), `estado` (ACTIVO | INACTIVO), `fecha_registro`
 - Un solo modelo Usuario con dos roles. No hacer tablas separadas para admin y cliente.
+- **ADMIN incluye al dueño y a los profes/empleados que cobran.** Cualquier ADMIN puede dar de alta a otro desde `/personal`. El DNI es único para todo el sistema, no por rol: una persona no puede tener ficha de socio y de profe a la vez.
+- La obligatoriedad de `password` para ADMIN no la puede expresar Prisma: se valida en la API y en el seed.
 
 ### PAGO
 - `id_pago` (PK), `usuario_id` (FK → Usuario), `monto` (numérico libre), `fecha_pago`, `fecha_vencimiento` (calculada), `metodo_pago` (EFECTIVO | TRANSFERENCIA | QR | MERCADO_PAGO), `tipo_pase` (MEDIO | LIBRE | ... configurable), `registrado_por` (FK → Usuario admin que cobró)
@@ -65,12 +67,16 @@ Sede → Usuarios · Usuario(cliente) → Pagos · Usuario(cliente) → Asistenc
 
 ## 5. Alcance del MVP (v1)
 
-- [ ] Auth de admins (NextAuth credenciales).
-- [ ] CRUD de socios (Usuario rol CLIENTE): DNI, nombre, apellido, email, teléfono, sede, estado.
-- [ ] Registro de pagos: monto, fecha_pago, `fecha_vencimiento` autocalculada (fecha_pago + período según tipo_pase, default +30 días), método, tipo_pase, `registrado_por` automático.
-- [ ] Pantalla de **recepción**: input DNI → verde/amarillo/rojo + nombre y vencimiento; registra asistencia inmutable.
-- [ ] **Dashboard admin**: contadores activos/próximos/vencidos (derivados), cobros del mes, morosos, próximos a vencer de la semana.
-- [ ] **Portal cliente (mínimo)**: ver estado de su cuota + **descargar su rutina** (archivo).
+- [x] Auth del personal (NextAuth credenciales, DNI + password).
+- [x] CRUD de socios (Usuario rol CLIENTE): DNI, nombre, apellido, email, teléfono, sede, estado.
+- [x] Registro de pagos: monto, fecha_pago, `fecha_vencimiento` autocalculada (fecha_pago + período según tipo_pase, default +30 días), método, tipo_pase, `registrado_por` automático.
+- [x] Pantalla de **recepción**: input DNI → verde/amarillo/rojo + nombre y vencimiento; registra asistencia inmutable.
+- [x] **Dashboard admin**: contadores derivados, cobros del mes, morosos, próximos a vencer.
+- [x] **Vista planilla** de socios con filtros y cobro en un click.
+- [x] **Gestión del personal**: el admin da de alta a los profes/empleados que cobran.
+- [x] **Página pública** del gimnasio + puerta única de ingreso.
+- [x] **Portal cliente (mínimo)**: ver estado de su cuota.
+- [ ] **Descarga de rutina** por el socio. Requiere claves de socio: un archivo personal no puede quedar detrás de un dato tan adivinable como el DNI.
 - [ ] Carga de **rutina** por el admin (subir PDF/imagen a Supabase Storage).
 - [ ] Script de **importación** de la planilla actual (ver sección 7).
 
@@ -79,24 +85,41 @@ Lector de huella (hardware), notificaciones automáticas WhatsApp/mail, **editor
 
 ## 6. Estructura de carpetas
 
+Estado real del proyecto (difiere del plan original: `/prisma` va en la raíz porque es el default de su tooling, y las dos pantallas de ingreso se unificaron en `/ingresar`).
+
 ```
+/prisma                    # schema.prisma, migraciones, seed.ts
+/public/fotos              # fotos del gimnasio (portada, sala, frente)
 /src
   /app
-    /(auth)/login
-    /(admin)
-      /dashboard
-      /socios
-      /pagos
-      /asistencias
-      /rutinas
-    /recepcion            # pantalla de puerta (DNI → verde/amarillo/rojo)
-    /(cliente)/mi-cuenta  # portal del socio (cuota + rutina)
+    page.tsx               # landing pública del gimnasio
+    /(auth)/ingresar       # PUERTA ÚNICA: socio con DNI, personal con DNI + password
+    /(admin)               # layout con verificación de sesión ADMIN
+      /dashboard           # contadores, caja del mes, morosos
+      /socios              # vista planilla + alta + ficha del socio
+      /personal            # alta de profes/empleados
+    /recepcion             # pantalla de puerta (DNI → verde/amarillo/rojo)
     /api
-      /socios  /pagos  /asistencias  /rutinas  /auth
-  /prisma                 # schema.prisma + migraciones
-  /lib                    # cliente Prisma, helpers de auth, cálculo de estado de cuota
+      /auth  /recepcion
   /components
+    /admin  /publico  /recepcion  /ui
+  /lib                     # prisma, auth, cuota, pases, socios, personal,
+                           # metricas, portal, recepcion, formato, gimnasio
+  /proxy.ts                # el "middleware" de Next 16
+  /generated/prisma        # cliente generado (gitignoreado)
 ```
+
+## 6bis. Superficies del sistema
+
+| Ruta | Quién entra | Qué hace |
+|---|---|---|
+| `/` | Cualquiera | Landing: qué es el gimnasio, actividades, planes, horarios, ubicación |
+| `/ingresar` | Cualquiera | **Puerta única.** Con DNI solo → estado de cuota. Con DNI + password → panel |
+| `/dashboard` | ADMIN | Contadores derivados, cobrado del mes, morosos, próximos a vencer |
+| `/socios` | ADMIN | Vista planilla con filtros y cobro en un click |
+| `/socios/[id]` | ADMIN | Ficha: pagos con quién cobró, ingresos, registrar pago, baja lógica |
+| `/personal` | ADMIN | Alta de profes/empleados, reset de contraseña, baja |
+| `/recepcion` | ADMIN | Puerta: DNI → verde/amarillo/naranja/rojo + asistencia |
 
 ## 7. Importación de la planilla actual (trampas)
 
@@ -118,6 +141,10 @@ Planilla "Asistencia socios junin": Nombre, Plan, Monto, Medio de pago, Fecha de
 - Validaciones de las Reglas de Oro en el backend/API, no solo en el front.
 - Una única función de cálculo de estado de cuota en `/lib`, reutilizada por recepción, dashboard y portal cliente.
 - `registrado_por` siempre del lado del servidor.
+- **Mobile primero.** Esto se va a usar más desde el celular que desde una computadora: el socio consulta su cuota desde el teléfono y el profe cobra parado en el mostrador. Toda pantalla arranca en una columna y recién se abre en `sm:`/`md:`. Las tablas de más de 4 columnas se duplican: tarjetas apiladas en el celular (`md:hidden`) y tabla en pantalla grande (`hidden md:block`). Nunca dejar que el `body` scrollee de costado.
+- **El color nunca comunica solo.** Cada estado lleva además ícono o texto: la pantalla de la puerta se lee de lejos y de reojo, y un recepcionista daltónico tiene que poder usarla.
+- **Acciones de servidor con `(estadoPrevio, formData)`**, no envueltas en closures. Así Next les da progressive enhancement y siguen andando si el JavaScript no cargó — cosa que importa en la PC del mostrador.
+- **Los datos del gimnasio** (dirección, teléfono, horarios, actividades, qué incluye cada plan) viven en `src/lib/gimnasio.ts`. Cambian dos veces por año y no justifican una tabla ni una pantalla de administración.
 
 ## 10. Notas de versiones (Fase 1)
 

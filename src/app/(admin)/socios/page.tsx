@@ -18,6 +18,7 @@ import { listarSocios, type SocioConCuota } from "@/lib/socios";
 import { cn } from "@/lib/utils";
 
 import { BotonPago } from "./boton-pago";
+import { TarjetaSocio } from "./tarjeta-socio";
 
 export const metadata: Metadata = { title: "Socios · Total Fit" };
 
@@ -152,8 +153,16 @@ export default async function PaginaSocios({
           No hay socios que coincidan.
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border">
-          <Table>
+        <>
+          {/* Celular: una tarjeta por socio. Ver abajo por qué. */}
+          <ul className="space-y-3 md:hidden">
+            {socios.map((socio) => (
+              <TarjetaSocio key={socio.id} socio={socio} />
+            ))}
+          </ul>
+
+          <div className="hidden overflow-x-auto rounded-lg border md:block">
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Socio</TableHead>
@@ -243,9 +252,10 @@ export default async function PaginaSocios({
                   </TableCell>
                 </TableRow>
               ))}
-            </TableBody>
-          </Table>
-        </div>
+              </TableBody>
+            </Table>
+          </div>
+        </>
       )}
 
       <p className="text-sm text-muted-foreground">

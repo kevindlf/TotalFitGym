@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type { EstadoCuota } from "@/lib/cuota";
+import { cn } from "@/lib/utils";
 
 import { ingresar, type EstadoIngreso } from "./acciones";
 
@@ -18,19 +19,53 @@ const COLORES: Record<EstadoCuota, string> = {
   VENCIDO: "border-red-500/40 bg-red-500/10",
 };
 
+// Inputs altos: se usan sobre todo desde el celular, con el pulgar.
 const CLASE_INPUT =
   "h-12 border-neutral-700 bg-neutral-900 text-lg text-neutral-100 placeholder:text-neutral-600";
 
+type Perfil = "socio" | "equipo";
+
 export function FormularioIngreso() {
   const [estado, accion, enviando] = useActionState(ingresar, ESTADO_INICIAL);
-  const [esDelEquipo, setEsDelEquipo] = useState(false);
+  const [perfil, setPerfil] = useState<Perfil>("socio");
 
   return (
     <div className="space-y-6">
+      {/* Elegir quién sos primero deja el formulario en una sola pregunta, que
+          es lo que se puede leer de un vistazo en un teléfono. */}
+      <div
+        role="tablist"
+        aria-label="Cómo querés ingresar"
+        className="grid grid-cols-2 gap-1 rounded-xl bg-neutral-900 p-1"
+      >
+        {(
+          [
+            { valor: "socio", texto: "Soy socio" },
+            { valor: "equipo", texto: "Trabajo acá" },
+          ] as const
+        ).map((opcion) => (
+          <button
+            key={opcion.valor}
+            type="button"
+            role="tab"
+            aria-selected={perfil === opcion.valor}
+            onClick={() => setPerfil(opcion.valor)}
+            className={cn(
+              "rounded-lg px-4 py-2.5 text-sm font-medium transition-colors",
+              perfil === opcion.valor
+                ? "bg-neutral-100 text-neutral-900"
+                : "text-neutral-400 hover:text-neutral-100",
+            )}
+          >
+            {opcion.texto}
+          </button>
+        ))}
+      </div>
+
       <form action={accion} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="dni" className="text-base">
-            Tu DNI
+            {perfil === "socio" ? "Tu DNI" : "DNI"}
           </Label>
           <Input
             id="dni"
@@ -45,9 +80,10 @@ export function FormularioIngreso() {
           <p className="text-xs text-neutral-500">Sin puntos ni espacios.</p>
         </div>
 
-        {/* El campo existe siempre, pero se muestra solo si la persona dice que
-            es del equipo: al socio no le sirve y lo confundiría. */}
-        <div className={esDelEquipo ? "space-y-2" : "hidden"}>
+        {/* El campo existe siempre pero se oculta para el socio: no lo necesita
+            y solo lo confundiría. Al ocultarlo se manda vacío, que es
+            exactamente lo que el servidor interpreta como "consulta de cuota". */}
+        <div className={perfil === "equipo" ? "space-y-2" : "hidden"}>
           <Label htmlFor="password" className="text-base">
             Contraseña
           </Label>
@@ -60,24 +96,18 @@ export function FormularioIngreso() {
           />
         </div>
 
-        <Button type="submit" disabled={enviando} className="h-12 w-full text-base">
+        <Button
+          type="submit"
+          disabled={enviando}
+          className="h-12 w-full text-base"
+        >
           {enviando
             ? "Entrando…"
-            : esDelEquipo
+            : perfil === "equipo"
               ? "Entrar al panel"
               : "Ver mi cuota"}
         </Button>
       </form>
-
-      <button
-        type="button"
-        onClick={() => setEsDelEquipo((valor) => !valor)}
-        className="text-sm text-neutral-400 underline underline-offset-4 hover:text-neutral-200"
-      >
-        {esDelEquipo
-          ? "Soy socio, solo quiero ver mi cuota"
-          : "Soy del equipo del gimnasio"}
-      </button>
 
       {estado.error ? (
         <p
@@ -91,10 +121,13 @@ export function FormularioIngreso() {
       {estado.cuota ? (
         <div
           role="status"
-          className={`space-y-2 rounded-xl border p-6 ${COLORES[estado.cuota.estado]}`}
+          className={cn(
+            "space-y-2 rounded-xl border p-5 sm:p-6",
+            COLORES[estado.cuota.estado],
+          )}
         >
           <p className="text-2xl font-semibold">Hola, {estado.cuota.nombre}</p>
-          <p className="text-lg">{estado.cuota.mensaje}</p>
+          <p className="text-lg text-pretty">{estado.cuota.mensaje}</p>
 
           {estado.cuota.cuentaDadaDeBaja ? (
             <p className="text-sm text-neutral-400">
