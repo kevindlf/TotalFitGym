@@ -1,3 +1,6 @@
+import type { Prisma } from "@/generated/prisma/client";
+import type { MetodoPago, TipoPase } from "@/generated/prisma/enums";
+
 import { calcularEstadoCuota, type ResultadoCuota } from "./cuota";
 import { prisma } from "./prisma";
 
@@ -23,9 +26,24 @@ const SELECCION_SOCIO = {
   pagos: {
     orderBy: { fecha_vencimiento: "desc" },
     take: 1,
-    select: { fecha_vencimiento: true },
+    select: {
+      fecha_vencimiento: true,
+      fecha_pago: true,
+      monto: true,
+      tipo_pase: true,
+      metodo_pago: true,
+    },
   },
 } as const;
+
+/** Último pago del socio. Es lo que se repite al marcar "pagó de nuevo". */
+export interface UltimoPago {
+  fecha_pago: Date;
+  fecha_vencimiento: Date;
+  monto: number;
+  tipo_pase: TipoPase;
+  metodo_pago: MetodoPago;
+}
 
 export interface SocioConCuota {
   id: string;
@@ -38,6 +56,10 @@ export interface SocioConCuota {
   fecha_registro: Date;
   sede: { id_sede: string; nombre: string };
   cuota: ResultadoCuota;
+  ultimoPago: UltimoPago | null;
+  /** Cuánto pagó en total desde que es socio. */
+  totalFacturado: number;
+  cantidadDePagos: number;
 }
 
 type SocioCrudo = {
@@ -50,15 +72,36 @@ type SocioCrudo = {
   estado: "ACTIVO" | "INACTIVO";
   fecha_registro: Date;
   sede: { id_sede: string; nombre: string };
-  pagos: { fecha_vencimiento: Date }[];
+  pagos: {
+    fecha_vencimiento: Date;
+    fecha_pago: Date;
+    monto: Prisma.Decimal;
+    tipo_pase: TipoPase;
+    metodo_pago: MetodoPago;
+  }[];
 };
 
-function conCuota(socio: SocioCrudo): SocioConCuota {
+function conCuota(
+  socio: SocioCrudo,
+  totales?: { total: number; cantidad: number },
+): SocioConCuota {
   const { pagos, ...resto } = socio;
+  const ultimo = pagos.at(0);
 
   return {
     ...resto,
-    cuota: calcularEstadoCuota(pagos.at(0)?.fecha_vencimiento ?? null),
+    cuota: calcularEstadoCuota(ultimo?.fecha_vencimiento ?? null),
+    ultimoPago: ultimo
+      ? {
+          fecha_pago: ultimo.fecha_pago,
+          fecha_vencimiento: ultimo.fecha_vencimiento,
+          monto: Number(ultimo.monto),
+          tipo_pase: ultimo.tipo_pase,
+          metodo_pago: ultimo.metodo_pago,
+        }
+      : null,
+    totalFacturado: totales?.total ?? 0,
+    cantidadDePagos: totales?.cantidad ?? 0,
   };
 }
 
@@ -72,24 +115,41 @@ function conCuota(socio: SocioCrudo): SocioConCuota {
 export async function listarSocios(busqueda?: string): Promise<SocioConCuota[]> {
   const termino = busqueda?.trim();
 
-  const socios = await prisma.usuario.findMany({
-    where: {
-      rol: "CLIENTE",
-      ...(termino
-        ? {
-            OR: [
-              { dni: { contains: termino } },
-              { nombre: { contains: termino, mode: "insensitive" } },
-              { apellido: { contains: termino, mode: "insensitive" } },
-            ],
-          }
-        : {}),
-    },
-    select: SELECCION_SOCIO,
-    orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
-  });
+  // Los totales van en una query aparte con groupBy en vez de sumar en memoria:
+  // traer todos los pagos de todos los socios solo para sumarlos sería tirar
+  // miles de filas al servidor de Node al pedo.
+  const [socios, totales] = await Promise.all([
+    prisma.usuario.findMany({
+      where: {
+        rol: "CLIENTE",
+        ...(termino
+          ? {
+              OR: [
+                { dni: { contains: termino } },
+                { nombre: { contains: termino, mode: "insensitive" } },
+                { apellido: { contains: termino, mode: "insensitive" } },
+              ],
+            }
+          : {}),
+      },
+      select: SELECCION_SOCIO,
+      orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
+    }),
+    prisma.pago.groupBy({
+      by: ["usuario_id"],
+      _sum: { monto: true },
+      _count: { _all: true },
+    }),
+  ]);
 
-  return socios.map(conCuota);
+  const porSocio = new Map(
+    totales.map((fila) => [
+      fila.usuario_id,
+      { total: Number(fila._sum.monto ?? 0), cantidad: fila._count._all },
+    ]),
+  );
+
+  return socios.map((socio) => conCuota(socio, porSocio.get(socio.id)));
 }
 
 export async function obtenerSocio(id: string) {

@@ -7,7 +7,7 @@ export function CerrarSesion() {
       action={async () => {
         "use server";
 
-        await signOut({ redirectTo: "/login" });
+        await signOut({ redirectTo: "/ingresar" });
       }}
     >
       <Button type="submit" variant="ghost" size="sm">

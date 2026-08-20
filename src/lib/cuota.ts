@@ -66,6 +66,17 @@ export const ETIQUETAS_ESTADO_CUOTA: Record<EstadoCuota, string> = {
   VENCIDO: "Vencido",
 };
 
+/**
+ * Los mismos estados, dichos como los decía la planilla: es el vocabulario con
+ * el que el gimnasio ya trabaja. Se usan en la vista de tabla.
+ */
+export const ETIQUETAS_PLANILLA: Record<EstadoCuota, string> = {
+  ACTIVO: "Pagado",
+  PROXIMO_A_VENCER: "Por vencer",
+  EN_PERIODO_DE_PAGO: "Falta pagar",
+  VENCIDO: "Falta pagar",
+};
+
 function enteroNoNegativo(valor: string | undefined, porDefecto: number) {
   const numero = Number(valor);
 

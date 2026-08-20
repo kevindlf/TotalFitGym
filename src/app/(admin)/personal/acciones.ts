@@ -20,7 +20,7 @@ async function exigirAdmin(): Promise<string> {
   const sesion = await auth();
 
   if (sesion?.user?.rol !== "ADMIN") {
-    redirect("/login");
+    redirect("/ingresar");
   }
 
   return sesion.user.id;

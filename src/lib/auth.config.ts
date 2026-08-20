@@ -10,7 +10,7 @@ import type { NextAuthConfig } from "next-auth";
  */
 export const authConfig = {
   session: { strategy: "jwt" },
-  pages: { signIn: "/login" },
+  pages: { signIn: "/ingresar" },
   providers: [],
   callbacks: {
     // Se ejecuta en el proxy. Solo ADMIN entra a las pantallas internas.

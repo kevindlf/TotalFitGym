@@ -9,12 +9,12 @@ export const metadata: Metadata = {
 };
 
 export default async function PaginaRecepcion() {
-  // El proxy ya redirige a /login, pero se vuelve a verificar acá: la doc de
+  // El proxy ya redirige a /ingresar, pero se vuelve a verificar acá: la doc de
   // Next dice explícitamente que el proxy no es la capa de autorización.
   const sesion = await auth();
 
   if (sesion?.user?.rol !== "ADMIN") {
-    redirect("/login");
+    redirect("/ingresar");
   }
 
   return (

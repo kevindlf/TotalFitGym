@@ -38,7 +38,7 @@ export default function PaginaPublica() {
         </span>
 
         <Button
-          render={<Link href="/mi-cuenta" />}
+          render={<Link href="/ingresar" />}
           variant="ghost"
           className="text-neutral-300"
         >
@@ -61,7 +61,7 @@ export default function PaginaPublica() {
             </p>
 
             <div className="flex flex-wrap gap-3">
-              <Button render={<Link href="/mi-cuenta" />} size="lg">
+              <Button render={<Link href="/ingresar" />} size="lg">
                 Ver mi cuota
               </Button>
               <Button
@@ -139,7 +139,7 @@ export default function PaginaPublica() {
       <footer className="border-t border-neutral-800">
         <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-4 p-6 text-sm text-neutral-500">
           <span>Total Fit · Junín</span>
-          <Link href="/login" className="hover:text-neutral-300">
+          <Link href="/ingresar" className="hover:text-neutral-300">
             Acceso del personal
           </Link>
         </div>

@@ -21,7 +21,7 @@ async function exigirAdmin(): Promise<string> {
   const sesion = await auth();
 
   if (sesion?.user?.rol !== "ADMIN") {
-    redirect("/login");
+    redirect("/ingresar");
   }
 
   return sesion.user.id;
@@ -162,6 +162,67 @@ export async function registrarPago(
   return {
     ok: `Pago registrado. La cuota vence el ${formatearFecha(fechaVencimiento)}.`,
   };
+}
+
+/**
+ * Registra que el socio volvió a pagar, repitiendo su último pago.
+ *
+ * Es el atajo de la planilla: el dueño ve el rojo, hace un click y la fila se
+ * pone en verde, sin volver a tipear monto, pase ni método. Solo sirve si ya
+ * hay un pago anterior del que copiar los datos; para el primer pago hay que
+ * cargarlo a mano una vez.
+ *
+ * El vencimiento y el admin los sigue poniendo el servidor (Reglas 2 y 4).
+ */
+export async function repetirUltimoPago(
+  _estadoPrevio: EstadoFormulario,
+  formData: FormData,
+): Promise<EstadoFormulario> {
+  const adminId = await exigirAdmin();
+
+  const parseado = z
+    .object({ usuario_id: z.string().trim().min(1) })
+    .safeParse({ usuario_id: formData.get("usuario_id") });
+
+  if (!parseado.success) {
+    return { error: "Falta el socio." };
+  }
+
+  const usuarioId = parseado.data.usuario_id;
+
+  const ultimo = await prisma.pago.findFirst({
+    where: { usuario_id: usuarioId, usuario: { rol: "CLIENTE" } },
+    orderBy: { fecha_vencimiento: "desc" },
+    select: { monto: true, tipo_pase: true, metodo_pago: true },
+  });
+
+  if (!ultimo) {
+    return {
+      error:
+        "Este socio no tiene ningún pago anterior. Cargá el primero desde su ficha.",
+    };
+  }
+
+  const fechaPago = new Date();
+  const fechaVencimiento = calcularFechaVencimiento(fechaPago, ultimo.tipo_pase);
+
+  await prisma.pago.create({
+    data: {
+      usuario_id: usuarioId,
+      monto: ultimo.monto,
+      fecha_pago: fechaPago,
+      fecha_vencimiento: fechaVencimiento,
+      tipo_pase: ultimo.tipo_pase,
+      metodo_pago: ultimo.metodo_pago,
+      registrado_por: adminId,
+    },
+  });
+
+  revalidatePath("/socios");
+  revalidatePath("/dashboard");
+  revalidatePath(`/socios/${usuarioId}`);
+
+  return { ok: `Pagado. Vence el ${formatearFecha(fechaVencimiento)}.` };
 }
 
 export async function cambiarEstadoSocio(

@@ -21,7 +21,7 @@ export default async function LayoutAdmin({
   const sesion = await auth();
 
   if (sesion?.user?.rol !== "ADMIN") {
-    redirect("/login");
+    redirect("/ingresar");
   }
 
   return (

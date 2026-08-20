@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
+import { Dumbbell } from "lucide-react";
 import Image from "next/image";
 
 import { cn } from "@/lib/utils";
@@ -8,9 +9,10 @@ import { cn } from "@/lib/utils";
 /**
  * Hueco de foto de la página pública.
  *
- * Mientras no haya fotos reales del gimnasio muestra un marcador con el nombre
- * de archivo que falta. Para poner una foto de verdad no hay que tocar código:
- * se copia el archivo a `public/fotos/` con ese nombre y listo.
+ * Si el archivo existe lo muestra optimizado; si no, muestra un bloque
+ * diseñado en vez de una imagen rota. La idea es que la página se vea entera
+ * desde el día uno y que poner las fotos reales sea copiar archivos a
+ * `public/fotos/`, sin tocar código ni pedirle nada a nadie.
  */
 export function Foto({
   src,
@@ -25,14 +27,9 @@ export function Foto({
 }) {
   const existe = existsSync(join(process.cwd(), "public", src));
 
-  return (
-    <div
-      className={cn(
-        "relative overflow-hidden rounded-xl bg-neutral-800",
-        className,
-      )}
-    >
-      {existe ? (
+  if (existe) {
+    return (
+      <div className={cn("relative overflow-hidden rounded-xl", className)}>
         <Image
           src={src}
           alt={alt}
@@ -41,15 +38,29 @@ export function Foto({
           sizes="(max-width: 768px) 100vw, 50vw"
           className="object-cover"
         />
-      ) : (
-        <div className="flex h-full items-center justify-center p-4 text-center text-xs leading-relaxed text-neutral-500">
-          <span>
-            Falta la foto
-            <br />
-            <code className="text-neutral-400">public{src}</code>
-          </span>
-        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        "relative flex flex-col items-center justify-center gap-3 overflow-hidden rounded-xl",
+        "bg-linear-to-br from-neutral-800 via-neutral-900 to-neutral-950",
+        "ring-1 ring-neutral-800 ring-inset",
+        className,
       )}
+    >
+      <Dumbbell className="size-10 text-emerald-500/50" aria-hidden />
+
+      <p className="px-6 text-center text-sm text-neutral-500">{alt}</p>
+
+      {/* Solo en desarrollo: en producción el hueco queda limpio. */}
+      {process.env.NODE_ENV === "development" ? (
+        <code className="absolute bottom-3 text-[10px] text-neutral-600">
+          public{src}
+        </code>
+      ) : null}
     </div>
   );
 }

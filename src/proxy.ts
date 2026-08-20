@@ -5,7 +5,7 @@ import { authConfig } from "@/lib/auth.config";
 /**
  * En Next.js 16 esto es lo que antes se llamaba `middleware.ts`.
  *
- * Hace un chequeo optimista: si no hay sesión de ADMIN, redirige a /login sin
+ * Hace un chequeo optimista: si no hay sesión de ADMIN, redirige a /ingresar sin
  * tocar la base. NO es la capa de autorización real — la doc de Next lo dice
  * explícitamente — así que cada page y cada route handler vuelve a verificar la
  * sesión del lado del servidor (Regla de Oro 4).
