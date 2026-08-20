@@ -8,6 +8,7 @@ const SECCIONES = [
   { href: "/dashboard", texto: "Panel" },
   { href: "/socios", texto: "Socios" },
   { href: "/recepcion", texto: "Recepción" },
+  { href: "/personal", texto: "Personal" },
 ];
 
 export default async function LayoutAdmin({

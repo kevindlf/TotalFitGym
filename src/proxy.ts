@@ -25,6 +25,7 @@ export const config = {
     "/asistencias/:path*",
     "/rutinas/:path*",
     "/recepcion/:path*",
+    "/personal/:path*",
     // Las APIs del panel. Se excluye /api/auth, que es el propio login.
     "/api/((?!auth).*)",
   ],
