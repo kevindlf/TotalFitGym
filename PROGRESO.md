@@ -54,13 +54,15 @@ Kevin corrió un script como Administrador que hizo backup de `pg_hba.conf`, lo 
 | DNI | Quién | Para qué |
 |---|---|---|
 | `20000001` | Kevin Admin | Tu usuario. **Cambiá el DNI por el real.** |
-| `20000002` | Fernando Profe | Alta de personal de prueba. Su contraseña se resetea desde /personal. |
+| `20000002` | Fernando Profe | Alta de personal de prueba. Su contraseña se resetea desde `/personal`. |
 | `10000001` | Ana Verde | Socio al día → verde |
 | `10000002` | Bruno Amarillo | Vence en 3 días → amarillo |
 | `10000003` | Carla Roja | Venció hace 10 días → rojo |
 | `10000004` | Diego SinPagos | Nunca pagó → rojo |
 
-Las contraseñas del admin están en `.env.local`. **Todo esto hay que borrarlo antes de usar el sistema en serio.**
+Las contraseñas están en `.env.local`, que está gitignoreado y nunca se sube. **Todos estos usuarios hay que borrarlos antes de usar el sistema en serio.**
+
+> Regla para este repo: **ninguna contraseña se escribe en un archivo versionado**, ni siquiera de una cuenta de prueba. Van en `.env.local` o se pasan por otro lado.
 
 ## Cómo levantar el proyecto
 
