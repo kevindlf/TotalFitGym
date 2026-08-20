@@ -80,21 +80,26 @@ export function FormularioIngreso() {
           <p className="text-xs text-neutral-500">Sin puntos ni espacios.</p>
         </div>
 
-        {/* El campo existe siempre pero se oculta para el socio: no lo necesita
-            y solo lo confundiría. Al ocultarlo se manda vacío, que es
-            exactamente lo que el servidor interpreta como "consulta de cuota". */}
-        <div className={perfil === "equipo" ? "space-y-2" : "hidden"}>
-          <Label htmlFor="password" className="text-base">
-            Contraseña
-          </Label>
-          <Input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            className={CLASE_INPUT}
-          />
-        </div>
+        {/* El campo se saca del DOM, no se esconde con CSS.
+            Escondiéndolo con `hidden` el input igual se enviaba: bastaba que el
+            navegador lo autocompletara para que el socio terminara pidiendo un
+            login de admin y recibiera "DNI o contraseña incorrectos" sin
+            entender por qué. */}
+        {perfil === "equipo" ? (
+          <div className="space-y-2">
+            <Label htmlFor="password" className="text-base">
+              Contraseña
+            </Label>
+            <Input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+              className={CLASE_INPUT}
+            />
+          </div>
+        ) : null}
 
         <Button
           type="submit"

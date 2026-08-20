@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import { EstadoCuotaBadge } from "@/components/admin/estado-cuota-badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { mensajeParaAdmin, type EstadoCuota } from "@/lib/cuota";
 import { formatearPesos } from "@/lib/formato";
@@ -36,9 +37,17 @@ export default async function PaginaDashboard() {
           </p>
         </div>
 
-        <p className="text-sm text-muted-foreground">
-          {resumen.asistenciasDeHoy} ingresos hoy
-        </p>
+        <div className="flex flex-wrap items-center gap-4">
+          <p className="text-sm text-muted-foreground">
+            {resumen.asistenciasDeHoy} ingresos hoy
+          </p>
+
+          {/* La pantalla de la puerta se abre desde acá y no desde el menú: es
+              para la PC del mostrador, no una tarea de administración. */}
+          <Button render={<Link href="/recepcion" />} variant="outline">
+            Abrir pantalla de puerta
+          </Button>
+        </div>
       </header>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

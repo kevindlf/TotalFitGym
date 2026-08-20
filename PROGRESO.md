@@ -55,10 +55,12 @@ Kevin corrió un script como Administrador que hizo backup de `pg_hba.conf`, lo 
 |---|---|---|
 | `20000001` | Kevin Admin | Tu usuario. **Cambiá el DNI por el real.** |
 | `20000002` | Fernando Profe | Alta de personal de prueba. Su contraseña se resetea desde `/personal`. |
-| `10000001` | Ana Verde | Socio al día → verde |
-| `10000002` | Bruno Amarillo | Vence en 3 días → amarillo |
-| `10000003` | Carla Roja | Venció hace 10 días → rojo |
-| `10000004` | Diego SinPagos | Nunca pagó → rojo |
+| `10000001` | Ana Gómez | Socio al día → verde |
+| `10000002` | Bruno Álvarez | Vence en 3 días → amarillo |
+| `10000003` | Carla Ibáñez | Venció hace 10 días → rojo |
+| `10000004` | Diego Sosa | Nunca pagó → rojo |
+
+> Los apellidos eran los colores del estado ("Ana Verde", "Carla Roja") y en la planilla parecía que el sistema escribía el color en la columna del nombre. Cambiados por apellidos comunes.
 
 Las contraseñas están en `.env.local`, que está gitignoreado y nunca se sube. **Todos estos usuarios hay que borrarlos antes de usar el sistema en serio.**
 
@@ -177,6 +179,7 @@ También se agregaron `mensajeParaAdmin()` y `mensajeParaSocio()` en `src/lib/cu
 - La landing tiene los datos del gimnasio hardcodeados. Si el dueño los quiere editar solo, hay que sacarlos a la base.
 
 ## Bitácora
+- **19/08/2026** — **Tres correcciones sobre el panel.** (1) **Bug de ingreso, corregido:** el campo de contraseña se ocultaba con CSS pero seguía en el DOM, así que se enviaba igual; bastaba que el navegador lo autocompletara para que un socio terminara pidiendo un login de admin y recibiera "DNI o contraseña incorrectos" sin entender por qué. Ahora el campo no se renderiza cuando el perfil es socio. (2) **Historial de pagos desplegable** desde la planilla, en la tabla y en las tarjetas del celular. Se carga a pedido con una server action: con 349 socios y un pago por mes, traerlo junto al listado serían miles de filas viajando para mostrar, casi siempre, ninguna. (3) **Recepción sale del menú del panel** y pasa a abrirse con un botón desde el dashboard. No se borró: es la pantalla de la PC de la puerta, la única que registra asistencias (Regla 3) y la que decide el acceso (Regla 2). Lo que sobraba era tenerla como sección de administración, donde el mismo dato se consulta mejor en `/socios`.
 - **19/08/2026** — **Repo publicado y limpio.** El proyecto está en `github.com/kevindlf/TotalFitGym`, rama `main`. Antes del primer push se escaneó el historial buscando secretos: apareció la contraseña de una cuenta de prueba escrita en este mismo archivo, en tres commits. Se reescribió el historial con `git filter-branch` para sacarla y se rotó igual esa contraseña en la base, porque una credencial expuesta se rota aunque se borre el rastro. Verificado que ya no aparece en ningún commit ni en el remoto, que los 18 commits siguen enteros y que el código quedó idéntico. Queda una rama local `respaldo-antes-de-limpiar` (nunca se sube) por si hiciera falta volver. Agregado un README con el arranque, las Reglas de Oro y el flujo de ramas.
 - **19/08/2026** — **Landing profesional, mobile-first y puerta única.** La página pública pasa de cuatro secciones sueltas a una landing completa: hero, qué vas a encontrar, planes con lo que incluye cada uno, horarios, ubicación con teléfono/Instagram/mail, y cierre. Barra superior fija con el botón de ingresar siempre a un toque. Todos los datos salen ahora de `src/lib/gimnasio.ts`, con los provisorios marcados `REVISAR`. `/ingresar` gana un selector "Soy socio / Trabajo acá" para que el formulario sea una sola pregunta por vez. **Mobile-first como convención del proyecto** (`CLAUDE.md` §9): la vista planilla de socios se convierte en tarjetas apiladas en el celular y queda como tabla solo de `md:` para arriba — ocho columnas en un teléfono obligaban a scrollear de costado para leer un solo socio. Nota de versión: lucide v1 sacó los íconos de marcas, así que Instagram se dibuja con `AtSign`.
 - **19/08/2026** — **Planilla editable y unificación del ingreso.** `/socios` pasa a ser la planilla que el gimnasio ya sabe leer, con filtros rápidos, la fila pintada según el estado, el vocabulario viejo (Pagado / Por vencer / Falta pagar / Sin pagos) y el botón "Pagó" que repite el último pago en un click. `repetirUltimoPago` recibe `(estadoPrevio, formData)` y no un closure, para recuperar el progressive enhancement. Se unifican `/login` y `/mi-cuenta` en `/ingresar`, con redirects para no romper links.

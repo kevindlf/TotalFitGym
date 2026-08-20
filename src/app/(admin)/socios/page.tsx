@@ -18,6 +18,7 @@ import { listarSocios, type SocioConCuota } from "@/lib/socios";
 import { cn } from "@/lib/utils";
 
 import { BotonPago } from "./boton-pago";
+import { HistorialPagos } from "./historial-pagos";
 import { TarjetaSocio } from "./tarjeta-socio";
 
 export const metadata: Metadata = { title: "Socios · Total Fit" };
@@ -172,6 +173,7 @@ export default async function PaginaSocios({
                 <TableHead className="text-right">Facturado</TableHead>
                 <TableHead>Vence</TableHead>
                 <TableHead>Estado</TableHead>
+                <TableHead>Historial</TableHead>
                 <TableHead>Cobrar</TableHead>
               </TableRow>
             </TableHeader>
@@ -243,7 +245,15 @@ export default async function PaginaSocios({
                     </span>
                   </TableCell>
 
-                  <TableCell>
+                  <TableCell className="align-top">
+                    <HistorialPagos
+                      usuarioId={socio.id}
+                      nombre={socio.nombre}
+                      cantidadDePagos={socio.cantidadDePagos}
+                    />
+                  </TableCell>
+
+                  <TableCell className="align-top">
                     <BotonPago
                       usuarioId={socio.id}
                       tienePagoAnterior={socio.ultimoPago !== null}

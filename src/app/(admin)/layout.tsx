@@ -4,10 +4,16 @@ import { redirect } from "next/navigation";
 import { CerrarSesion } from "@/components/admin/cerrar-sesion";
 import { auth } from "@/lib/auth";
 
+/**
+ * Recepción NO va acá.
+ *
+ * Es la pantalla de la PC de la puerta, no una tarea de administración: desde
+ * el panel el mismo dato se consulta mejor en /socios. Se llega desde el
+ * dashboard, con un botón que deja claro para qué es.
+ */
 const SECCIONES = [
   { href: "/dashboard", texto: "Panel" },
   { href: "/socios", texto: "Socios" },
-  { href: "/recepcion", texto: "Recepción" },
   { href: "/personal", texto: "Personal" },
 ];
 

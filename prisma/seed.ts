@@ -90,15 +90,22 @@ async function sembrarSociosDemo(
 ) {
   const hoy = new Date();
 
+  // Nombres comunes a propósito: si el apellido dijera el color del estado, la
+  // planilla parecería estar escribiendo el color en la columna del nombre.
   const socios = [
-    { dni: "10000001", nombre: "Ana", apellido: "Verde", diasHastaVencer: 20 },
+    { dni: "10000001", nombre: "Ana", apellido: "Gómez", diasHastaVencer: 20 },
     {
       dni: "10000002",
       nombre: "Bruno",
-      apellido: "Amarillo",
+      apellido: "Álvarez",
       diasHastaVencer: 3,
     },
-    { dni: "10000003", nombre: "Carla", apellido: "Roja", diasHastaVencer: -10 },
+    {
+      dni: "10000003",
+      nombre: "Carla",
+      apellido: "Ibáñez",
+      diasHastaVencer: -10,
+    },
   ];
 
   for (const socio of socios) {
@@ -145,7 +152,7 @@ async function sembrarSociosDemo(
     create: {
       dni: "10000004",
       nombre: "Diego",
-      apellido: "SinPagos",
+      apellido: "Sosa",
       rol: "CLIENTE",
       estado: "ACTIVO",
       sede_id: sedeId,

@@ -225,6 +225,53 @@ export async function repetirUltimoPago(
   return { ok: `Pagado. Vence el ${formatearFecha(fechaVencimiento)}.` };
 }
 
+export interface PagoDelHistorial {
+  id_pago: string;
+  monto: number;
+  fecha_pago: string;
+  fecha_vencimiento: string;
+  tipo_pase: string;
+  metodo_pago: string;
+  cobro: string;
+}
+
+/**
+ * Historial de pagos de un socio, para desplegar dentro de la planilla.
+ *
+ * Se carga a pedido y no junto con el listado: con 349 socios y un pago por
+ * mes cada uno, traer todo de una serían miles de filas viajando al navegador
+ * para mostrar, casi siempre, ninguna.
+ */
+export async function obtenerHistorialDePagos(
+  usuarioId: string,
+): Promise<PagoDelHistorial[]> {
+  await exigirAdmin();
+
+  const pagos = await prisma.pago.findMany({
+    where: { usuario_id: usuarioId, usuario: { rol: "CLIENTE" } },
+    orderBy: { fecha_pago: "desc" },
+    select: {
+      id_pago: true,
+      monto: true,
+      fecha_pago: true,
+      fecha_vencimiento: true,
+      tipo_pase: true,
+      metodo_pago: true,
+      admin: { select: { nombre: true, apellido: true } },
+    },
+  });
+
+  return pagos.map((pago) => ({
+    id_pago: pago.id_pago,
+    monto: Number(pago.monto),
+    fecha_pago: pago.fecha_pago.toISOString(),
+    fecha_vencimiento: pago.fecha_vencimiento.toISOString(),
+    tipo_pase: pago.tipo_pase,
+    metodo_pago: pago.metodo_pago,
+    cobro: `${pago.admin.nombre} ${pago.admin.apellido}`,
+  }));
+}
+
 export async function cambiarEstadoSocio(
   usuarioId: string,
   nuevoEstado: "ACTIVO" | "INACTIVO",

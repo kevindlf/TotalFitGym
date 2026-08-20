@@ -7,6 +7,7 @@ import type { SocioConCuota } from "@/lib/socios";
 import { cn } from "@/lib/utils";
 
 import { BotonPago } from "./boton-pago";
+import { HistorialPagos } from "./historial-pagos";
 
 /**
  * La misma fila de la planilla, pero apilada para el celular.
@@ -102,6 +103,12 @@ export function TarjetaSocio({ socio }: { socio: SocioConCuota }) {
           </dd>
         </div>
       </dl>
+
+      <HistorialPagos
+        usuarioId={socio.id}
+        nombre={socio.nombre}
+        cantidadDePagos={socio.cantidadDePagos}
+      />
 
       <BotonPago
         usuarioId={socio.id}
