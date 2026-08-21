@@ -13,7 +13,7 @@ const ESTADO_INICIAL: EstadoIngreso = {};
 
 // Inputs altos: se usan sobre todo desde el celular, con el pulgar.
 const CLASE_INPUT =
-  "h-12 border-neutral-700 bg-neutral-900 text-lg text-neutral-100 placeholder:text-neutral-600";
+  "h-12 text-lg";
 
 type Perfil = "socio" | "equipo";
 
@@ -28,7 +28,7 @@ export function FormularioIngreso() {
       <div
         role="tablist"
         aria-label="Cómo querés ingresar"
-        className="grid grid-cols-2 gap-1 rounded-xl bg-neutral-900 p-1"
+        className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1"
       >
         {(
           [
@@ -45,8 +45,8 @@ export function FormularioIngreso() {
             className={cn(
               "rounded-lg px-4 py-2.5 text-sm font-medium transition-colors",
               perfil === opcion.valor
-                ? "bg-neutral-100 text-neutral-900"
-                : "text-neutral-400 hover:text-neutral-100",
+                ? "bg-background text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
             {opcion.texto}
@@ -69,7 +69,7 @@ export function FormularioIngreso() {
             placeholder="30123456"
             className={CLASE_INPUT}
           />
-          <p className="text-xs text-neutral-500">Sin puntos ni espacios.</p>
+          <p className="text-xs text-muted-foreground">Sin puntos ni espacios.</p>
         </div>
 
         {/* El campo se saca del DOM, no se esconde con CSS.
@@ -109,7 +109,7 @@ export function FormularioIngreso() {
       {estado.error ? (
         <p
           role="alert"
-          className="rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-3 text-neutral-300"
+          className="rounded-lg border border-input bg-card px-4 py-3 text-foreground/85"
         >
           {estado.error}
         </p>

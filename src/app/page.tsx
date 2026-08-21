@@ -29,7 +29,7 @@ export default function PaginaPublica() {
   const enlaceWhatsapp = `https://wa.me/${GIMNASIO.whatsapp}`;
 
   return (
-    <div className="flex min-h-svh flex-col bg-neutral-950 text-neutral-100">
+    <div className="flex min-h-svh flex-col bg-background text-foreground">
       <Encabezado />
 
       <main className="flex-1">
@@ -38,10 +38,10 @@ export default function PaginaPublica() {
           <div className="space-y-6">
             <h1 className="text-4xl font-bold tracking-tight text-balance sm:text-5xl">
               Entrenás vos.{" "}
-              <span className="text-emerald-400">Del resto nos ocupamos.</span>
+              <span className="text-emerald-600 dark:text-emerald-400">Del resto nos ocupamos.</span>
             </h1>
 
-            <p className="text-lg text-pretty text-neutral-400">
+            <p className="text-lg text-pretty text-muted-foreground">
               {GIMNASIO.descripcion}
             </p>
 
@@ -64,7 +64,7 @@ export default function PaginaPublica() {
                 }
                 size="lg"
                 variant="outline"
-                className="h-12 border-neutral-700 bg-transparent text-base text-neutral-200 hover:bg-neutral-900 hover:text-neutral-50"
+                className="h-12 border-input bg-transparent text-base text-foreground hover:bg-card hover:text-foreground"
               >
                 Escribinos
               </Button>
@@ -82,14 +82,14 @@ export default function PaginaPublica() {
         {/* ---------------------------------------------------------------- */}
         <section
           id="nosotros"
-          className="scroll-mt-16 border-t border-neutral-900 bg-neutral-900/40"
+          className="scroll-mt-16 border-t border-border bg-muted/40"
         >
           <div className="mx-auto w-full max-w-5xl space-y-8 px-4 py-12 sm:px-6 sm:py-16">
             <div className="space-y-3">
               <h2 className="text-3xl font-bold tracking-tight">
                 Qué vas a encontrar
               </h2>
-              <p className="max-w-2xl text-pretty text-neutral-400">
+              <p className="max-w-2xl text-pretty text-muted-foreground">
                 No somos una cadena. Somos un gimnasio de barrio donde el profe
                 se sabe tu nombre y sabe en qué estás trabajando.
               </p>
@@ -99,12 +99,12 @@ export default function PaginaPublica() {
               {ACTIVIDADES.map((actividad) => (
                 <div
                   key={actividad.titulo}
-                  className="rounded-xl border border-neutral-800 bg-neutral-950 p-5"
+                  className="rounded-xl border border-border bg-background p-5"
                 >
-                  <h3 className="font-semibold text-emerald-400">
+                  <h3 className="font-semibold text-emerald-600 dark:text-emerald-400">
                     {actividad.titulo}
                   </h3>
-                  <p className="mt-2 text-pretty text-neutral-400">
+                  <p className="mt-2 text-pretty text-muted-foreground">
                     {actividad.descripcion}
                   </p>
                 </div>
@@ -122,20 +122,20 @@ export default function PaginaPublica() {
               {PLANES.map((plan) => (
                 <div
                   key={plan}
-                  className="flex flex-col rounded-xl border border-neutral-800 bg-neutral-900 p-6"
+                  className="flex flex-col rounded-xl border border-border bg-card p-6"
                 >
-                  <h3 className="text-xl font-semibold text-emerald-400">
+                  <h3 className="text-xl font-semibold text-emerald-600 dark:text-emerald-400">
                     {ETIQUETAS_TIPO_PASE[plan]}
                   </h3>
-                  <p className="mt-1 text-neutral-400">
+                  <p className="mt-1 text-muted-foreground">
                     {DETALLE_PLANES[plan].subtitulo}
                   </p>
 
                   <ul className="mt-5 space-y-2.5">
                     {DETALLE_PLANES[plan].incluye.map((item) => (
-                      <li key={item} className="flex gap-2.5 text-neutral-300">
+                      <li key={item} className="flex gap-2.5 text-foreground/85">
                         <Check
-                          className="mt-0.5 size-4 shrink-0 text-emerald-400"
+                          className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400"
                           aria-hidden
                         />
                         <span>{item}</span>
@@ -143,7 +143,7 @@ export default function PaginaPublica() {
                     ))}
                   </ul>
 
-                  <p className="mt-6 border-t border-neutral-800 pt-4 text-sm text-neutral-500">
+                  <p className="mt-6 border-t border-border pt-4 text-sm text-muted-foreground">
                     Consultanos el precio actual por WhatsApp o en recepción.
                   </p>
                 </div>
@@ -155,22 +155,22 @@ export default function PaginaPublica() {
         {/* ---------------------------------------------------------------- */}
         <section
           id="horarios"
-          className="scroll-mt-16 border-t border-neutral-900 bg-neutral-900/40"
+          className="scroll-mt-16 border-t border-border bg-muted/40"
         >
           <div className="mx-auto grid w-full max-w-5xl gap-8 px-4 py-12 sm:px-6 sm:py-16 md:grid-cols-2 md:gap-12">
             <div className="space-y-5">
               <h2 className="flex items-center gap-2.5 text-3xl font-bold tracking-tight">
-                <Clock className="size-7 text-emerald-400" aria-hidden />
+                <Clock className="size-7 text-emerald-600 dark:text-emerald-400" aria-hidden />
                 Horarios
               </h2>
 
-              <dl className="divide-y divide-neutral-800 border-y border-neutral-800">
+              <dl className="divide-y divide-border border-y border-border">
                 {HORARIOS.map((horario) => (
                   <div
                     key={horario.dias}
                     className="flex items-baseline justify-between gap-4 py-3"
                   >
-                    <dt className="text-neutral-300">{horario.dias}</dt>
+                    <dt className="text-foreground/85">{horario.dias}</dt>
                     <dd className="font-medium tabular-nums">
                       {horario.horas}
                     </dd>
@@ -192,19 +192,19 @@ export default function PaginaPublica() {
           <div className="mx-auto grid w-full max-w-5xl gap-8 px-4 py-12 sm:px-6 sm:py-16 md:grid-cols-2 md:gap-12">
             <div className="space-y-5">
               <h2 className="flex items-center gap-2.5 text-3xl font-bold tracking-tight">
-                <MapPin className="size-7 text-emerald-400" aria-hidden />
+                <MapPin className="size-7 text-emerald-600 dark:text-emerald-400" aria-hidden />
                 Dónde estamos
               </h2>
 
-              <p className="text-lg text-neutral-300">{GIMNASIO.direccion}</p>
+              <p className="text-lg text-foreground/85">{GIMNASIO.direccion}</p>
 
-              <ul className="space-y-3 text-neutral-400">
+              <ul className="space-y-3 text-muted-foreground">
                 <li>
                   <a
                     href={enlaceWhatsapp}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2.5 hover:text-neutral-100"
+                    className="flex items-center gap-2.5 hover:text-foreground"
                   >
                     <Phone className="size-4 shrink-0" aria-hidden />
                     {GIMNASIO.telefono}
@@ -215,7 +215,7 @@ export default function PaginaPublica() {
                     href={`https://instagram.com/${GIMNASIO.instagram}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2.5 hover:text-neutral-100"
+                    className="flex items-center gap-2.5 hover:text-foreground"
                   >
                     <AtSign className="size-4 shrink-0" aria-hidden />@
                     {GIMNASIO.instagram}
@@ -224,7 +224,7 @@ export default function PaginaPublica() {
                 <li>
                   <a
                     href={`mailto:${GIMNASIO.email}`}
-                    className="flex items-center gap-2.5 hover:text-neutral-100"
+                    className="flex items-center gap-2.5 hover:text-foreground"
                   >
                     <Mail className="size-4 shrink-0" aria-hidden />
                     {GIMNASIO.email}
@@ -242,12 +242,12 @@ export default function PaginaPublica() {
         </section>
 
         {/* ---------------------------------------------------------------- */}
-        <section className="border-t border-neutral-900 bg-linear-to-b from-neutral-900/40 to-neutral-950">
+        <section className="border-t border-border bg-linear-to-b from-muted/40 to-background">
           <div className="mx-auto w-full max-w-5xl space-y-5 px-4 py-14 text-center sm:px-6">
             <h2 className="text-3xl font-bold tracking-tight text-balance">
               ¿Ya sos socio?
             </h2>
-            <p className="text-neutral-400">
+            <p className="text-muted-foreground">
               Consultá con tu DNI si tenés la cuota al día, sin llamar ni
               acercarte.
             </p>
@@ -262,12 +262,12 @@ export default function PaginaPublica() {
         </section>
       </main>
 
-      <footer className="border-t border-neutral-800">
-        <div className="mx-auto flex w-full max-w-5xl flex-col gap-3 px-4 py-6 text-sm text-neutral-500 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+      <footer className="border-t border-border">
+        <div className="mx-auto flex w-full max-w-5xl flex-col gap-3 px-4 py-6 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6">
           <span>
             {GIMNASIO.nombre} · {GIMNASIO.ciudad}
           </span>
-          <Link href="/ingresar" className="hover:text-neutral-300">
+          <Link href="/ingresar" className="hover:text-foreground/85">
             Acceso del personal
           </Link>
         </div>

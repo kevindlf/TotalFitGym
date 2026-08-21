@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { CerrarSesion } from "@/components/admin/cerrar-sesion";
+import { BotonTema } from "@/components/ui/boton-tema";
 import { auth } from "@/lib/auth";
 
 /**
@@ -51,7 +52,10 @@ export default async function LayoutAdmin({
           </nav>
 
           <div className="ml-auto flex items-center gap-3 text-sm">
-            <span className="text-muted-foreground">{sesion.user.name}</span>
+            <span className="hidden text-muted-foreground sm:inline">
+              {sesion.user.name}
+            </span>
+            <BotonTema />
             <CerrarSesion />
           </div>
         </div>

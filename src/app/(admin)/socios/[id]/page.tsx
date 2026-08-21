@@ -134,8 +134,51 @@ export default async function PaginaSocio({
             No hay pagos registrados.
           </p>
         ) : (
-          <div className="overflow-x-auto rounded-lg border">
-            <Table>
+          <>
+            {/* Celular: una tarjeta por pago. */}
+            <ul className="space-y-3 md:hidden">
+              {socio.pagos.map((pago) => (
+                <li key={pago.id_pago} className="space-y-2 rounded-lg border p-4">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <p className="text-lg font-medium tabular-nums">
+                      {formatearPesos(pago.monto)}
+                    </p>
+                    <p className="text-sm text-muted-foreground tabular-nums">
+                      {formatearFecha(pago.fecha_pago)}
+                    </p>
+                  </div>
+
+                  <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-sm">
+                    <div>
+                      <dt className="text-muted-foreground">Pase</dt>
+                      <dd>{ETIQUETAS_TIPO_PASE[pago.tipo_pase]}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Método</dt>
+                      <dd>
+                        {ETIQUETAS_METODO[pago.metodo_pago] ?? pago.metodo_pago}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-muted-foreground">Vence</dt>
+                      <dd className="tabular-nums">
+                        {formatearFecha(pago.fecha_vencimiento)}
+                      </dd>
+                    </div>
+                    <div>
+                      {/* Regla de Oro 4: siempre se sabe quién cobró. */}
+                      <dt className="text-muted-foreground">Cobró</dt>
+                      <dd>
+                        {pago.admin.nombre} {pago.admin.apellido}
+                      </dd>
+                    </div>
+                  </dl>
+                </li>
+              ))}
+            </ul>
+
+            <div className="hidden overflow-x-auto rounded-lg border md:block">
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Pagó</TableHead>
@@ -169,9 +212,10 @@ export default async function PaginaSocio({
                     </TableCell>
                   </TableRow>
                 ))}
-              </TableBody>
-            </Table>
-          </div>
+                </TableBody>
+              </Table>
+            </div>
+          </>
         )}
       </section>
 

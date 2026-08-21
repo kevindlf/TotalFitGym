@@ -46,18 +46,18 @@ export function Foto({
     <div
       className={cn(
         "relative flex flex-col items-center justify-center gap-3 overflow-hidden rounded-xl",
-        "bg-linear-to-br from-neutral-800 via-neutral-900 to-neutral-950",
-        "ring-1 ring-neutral-800 ring-inset",
+        "bg-linear-to-br from-muted via-muted/60 to-background",
+        "ring-1 ring-border ring-inset",
         className,
       )}
     >
-      <Dumbbell className="size-10 text-emerald-500/50" aria-hidden />
+      <Dumbbell className="size-10 text-emerald-600/50 dark:text-emerald-400/50" aria-hidden />
 
-      <p className="px-6 text-center text-sm text-neutral-500">{alt}</p>
+      <p className="px-6 text-center text-sm text-muted-foreground">{alt}</p>
 
       {/* Solo en desarrollo: en producción el hueco queda limpio. */}
       {process.env.NODE_ENV === "development" ? (
-        <code className="absolute bottom-3 text-[10px] text-neutral-600">
+        <code className="absolute bottom-3 text-[10px] text-muted-foreground">
           public{src}
         </code>
       ) : null}

@@ -77,8 +77,11 @@ export function HistorialPagos({
         {cantidadDePagos === 1 ? "pago" : "pagos"}
       </Button>
 
+      {/* El desplegado no lleva fondo propio a propósito: así el tinte de la
+          fila (verde, amarillo, naranja o rojo) sigue hacia abajo y se lee como
+          parte del mismo socio, no como un bloque suelto. */}
       {abierto ? (
-        <div className="rounded-md border bg-muted/30 p-3">
+        <div className="rounded-md border border-current/15 p-3">
           {cargando ? (
             <p className="text-sm text-muted-foreground">Cargando…</p>
           ) : error ? (

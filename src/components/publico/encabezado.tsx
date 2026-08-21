@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { BotonTema } from "@/components/ui/boton-tema";
 import { Button } from "@/components/ui/button";
 
 const SECCIONES = [
@@ -18,25 +19,29 @@ const SECCIONES = [
  */
 export function Encabezado() {
   return (
-    <header className="sticky top-0 z-50 border-b border-neutral-800 bg-neutral-950/90 backdrop-blur">
+    <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur">
       <div className="mx-auto flex w-full max-w-5xl items-center gap-4 px-4 py-3 sm:px-6">
         <Link href="/" className="text-lg font-bold tracking-tight sm:text-xl">
-          TOTAL <span className="text-emerald-400">FIT</span>
+          TOTAL <span className="text-emerald-600 dark:text-emerald-400">FIT</span>
         </Link>
 
-        <nav className="hidden gap-5 text-sm text-neutral-400 md:flex">
+        <nav className="hidden gap-5 text-sm text-muted-foreground md:flex">
           {SECCIONES.map((seccion) => (
             <a
               key={seccion.href}
               href={seccion.href}
-              className="hover:text-neutral-100"
+              className="hover:text-foreground"
             >
               {seccion.texto}
             </a>
           ))}
         </nav>
 
-        <Button render={<Link href="/ingresar" />} className="ml-auto">
+        <div className="ml-auto flex items-center gap-1">
+          <BotonTema />
+        </div>
+
+        <Button render={<Link href="/ingresar" />}>
           Ingresar
         </Button>
       </div>

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { BotonTema } from "@/components/ui/boton-tema";
 import { Button } from "@/components/ui/button";
 import type { EstadoCuota } from "@/lib/cuota";
 import {
@@ -40,30 +41,34 @@ export default async function PaginaMiCuenta() {
   }
 
   return (
-    <div className="flex min-h-svh flex-col bg-neutral-950 text-neutral-100">
-      <header className="border-b border-neutral-800">
+    <div className="flex min-h-svh flex-col bg-background text-foreground">
+      <header className="border-b border-border">
         <div className="mx-auto flex w-full max-w-2xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <Link href="/" className="text-lg font-bold tracking-tight">
-            TOTAL <span className="text-emerald-400">FIT</span>
+            TOTAL <span className="text-emerald-600 dark:text-emerald-400">FIT</span>
           </Link>
 
-          <form
-            action={async () => {
-              "use server";
+          <div className="flex items-center gap-1">
+            <BotonTema />
 
-              await cerrarSesionDelSocio();
-              redirect("/");
-            }}
-          >
-            <Button
-              type="submit"
-              variant="ghost"
-              size="sm"
-              className="text-neutral-400"
+            <form
+              action={async () => {
+                "use server";
+
+                await cerrarSesionDelSocio();
+                redirect("/");
+              }}
             >
-              Salir
-            </Button>
-          </form>
+              <Button
+                type="submit"
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground"
+              >
+                Salir
+              </Button>
+            </form>
+          </div>
         </div>
       </header>
 
@@ -72,7 +77,7 @@ export default async function PaginaMiCuenta() {
           <h1 className="text-3xl font-bold tracking-tight">
             Hola, {socio.nombre}
           </h1>
-          <p className="text-neutral-400">
+          <p className="text-muted-foreground">
             {socio.apellido} · DNI {socio.dni} · Sede {socio.sede}
           </p>
         </div>
@@ -88,9 +93,9 @@ export default async function PaginaMiCuenta() {
             {socio.cuota.mensaje}
           </p>
 
-          <dl className="grid grid-cols-2 gap-4 border-t border-white/10 pt-4 text-sm">
+          <dl className="grid grid-cols-2 gap-4 border-t border-current/15 pt-4 text-sm">
             <div>
-              <dt className="text-neutral-400">Tu plan</dt>
+              <dt className="text-muted-foreground">Tu plan</dt>
               <dd className="font-medium">
                 {socio.planActual
                   ? ETIQUETAS_TIPO_PASE[
@@ -101,7 +106,7 @@ export default async function PaginaMiCuenta() {
             </div>
 
             <div>
-              <dt className="text-neutral-400">Vence</dt>
+              <dt className="text-muted-foreground">Vence</dt>
               <dd className="font-medium tabular-nums">
                 {socio.cuota.fechaVencimiento
                   ? formatearFecha(socio.cuota.fechaVencimiento)
@@ -111,7 +116,7 @@ export default async function PaginaMiCuenta() {
           </dl>
 
           {socio.cuota.cuentaDadaDeBaja ? (
-            <p className="text-sm text-neutral-300">
+            <p className="text-sm text-foreground/85">
               Tu cuenta figura dada de baja. Acercate a recepción para
               reactivarla.
             </p>
@@ -119,12 +124,12 @@ export default async function PaginaMiCuenta() {
         </section>
 
         {/* ---- rutina (todavía no) ---- */}
-        <section className="rounded-xl border border-neutral-800 bg-neutral-900/50 p-5">
+        <section className="rounded-xl border border-border bg-muted/50 p-5">
           <h2 className="flex items-center gap-2.5 text-lg font-semibold">
-            <Dumbbell className="size-5 text-emerald-400" aria-hidden />
+            <Dumbbell className="size-5 text-emerald-600 dark:text-emerald-400" aria-hidden />
             Mi rutina
           </h2>
-          <p className="mt-2 text-neutral-400">
+          <p className="mt-2 text-muted-foreground">
             Todavía no está disponible. Cuando tu profe la cargue, la vas a
             poder ver y descargar desde acá.
           </p>
@@ -133,16 +138,16 @@ export default async function PaginaMiCuenta() {
         {/* ---- historial de pagos ---- */}
         <section className="space-y-3">
           <h2 className="flex items-center gap-2.5 text-lg font-semibold">
-            <FileText className="size-5 text-emerald-400" aria-hidden />
+            <FileText className="size-5 text-emerald-600 dark:text-emerald-400" aria-hidden />
             Mis pagos
           </h2>
 
           {socio.pagos.length === 0 ? (
-            <p className="rounded-xl border border-neutral-800 p-5 text-neutral-400">
+            <p className="rounded-xl border border-border p-5 text-muted-foreground">
               Todavía no tenemos ningún pago tuyo registrado.
             </p>
           ) : (
-            <ul className="divide-y divide-neutral-800 rounded-xl border border-neutral-800">
+            <ul className="divide-y divide-border rounded-xl border border-border">
               {socio.pagos.map((pago) => (
                 <li
                   key={pago.id_pago}
@@ -152,7 +157,7 @@ export default async function PaginaMiCuenta() {
                     <p className="font-medium tabular-nums">
                       {formatearPesos(pago.monto)}
                     </p>
-                    <p className="text-sm text-neutral-400">
+                    <p className="text-sm text-muted-foreground">
                       {
                         ETIQUETAS_TIPO_PASE[
                           pago.tipo_pase as keyof typeof ETIQUETAS_TIPO_PASE
@@ -161,7 +166,7 @@ export default async function PaginaMiCuenta() {
                     </p>
                   </div>
 
-                  <div className="text-right text-sm text-neutral-400 tabular-nums">
+                  <div className="text-right text-sm text-muted-foreground tabular-nums">
                     <p>Pagaste el {formatearFecha(pago.fecha_pago)}</p>
                     <p>Cubrió hasta {formatearFecha(pago.fecha_vencimiento)}</p>
                   </div>
@@ -174,19 +179,19 @@ export default async function PaginaMiCuenta() {
         {/* ---- asistencias ---- */}
         <section className="space-y-3">
           <h2 className="flex items-center gap-2.5 text-lg font-semibold">
-            <CalendarCheck className="size-5 text-emerald-400" aria-hidden />
+            <CalendarCheck className="size-5 text-emerald-600 dark:text-emerald-400" aria-hidden />
             Mis ingresos
-            <span className="text-sm font-normal text-neutral-500 tabular-nums">
+            <span className="text-sm font-normal text-muted-foreground tabular-nums">
               {socio.totalIngresos} en total
             </span>
           </h2>
 
           {socio.ultimosIngresos.length === 0 ? (
-            <p className="rounded-xl border border-neutral-800 p-5 text-neutral-400">
+            <p className="rounded-xl border border-border p-5 text-muted-foreground">
               Todavía no registramos ningún ingreso tuyo.
             </p>
           ) : (
-            <ul className="rounded-xl border border-neutral-800 p-4 text-sm text-neutral-300 tabular-nums">
+            <ul className="rounded-xl border border-border p-4 text-sm text-foreground/85 tabular-nums">
               {socio.ultimosIngresos.map((ingreso) => (
                 <li key={ingreso} className="py-0.5">
                   {formatearFechaHora(ingreso)}
@@ -196,7 +201,7 @@ export default async function PaginaMiCuenta() {
           )}
         </section>
 
-        <p className="text-sm text-neutral-500">
+        <p className="text-sm text-muted-foreground">
           Socio desde el {formatearFecha(socio.socioDesde)}.
         </p>
       </main>

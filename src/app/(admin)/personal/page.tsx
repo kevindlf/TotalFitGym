@@ -16,6 +16,7 @@ import { listarSedes } from "@/lib/socios";
 
 import { BotonEstado, CambiarPassword } from "./acciones-miembro";
 import { FormularioPersonal } from "./formulario-personal";
+import { TarjetaMiembro } from "./tarjeta-miembro";
 
 export const metadata: Metadata = { title: "Personal · Total Fit" };
 
@@ -46,7 +47,18 @@ export default async function PaginaPersonal() {
           </span>
         </h2>
 
-        <div className="overflow-x-auto rounded-lg border">
+        {/* Celular: una tarjeta por persona. */}
+        <ul className="space-y-3 md:hidden">
+          {personal.map((miembro) => (
+            <TarjetaMiembro
+              key={miembro.id}
+              miembro={miembro}
+              esUnoMismo={miembro.id === sesion?.user?.id}
+            />
+          ))}
+        </ul>
+
+        <div className="hidden overflow-x-auto rounded-lg border md:block">
           <Table>
             <TableHeader>
               <TableRow>
