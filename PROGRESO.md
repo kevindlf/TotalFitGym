@@ -30,6 +30,8 @@ También verificado en el login: un socio (rol CLIENTE) **no puede** entrar al p
 | Responsive / mobile | ✅ Tarjetas en celular, tabla en escritorio, en las 3 tablas. |
 | Modo claro / oscuro | ✅ Botón en las 4 superficies, arranca con el del sistema. |
 | Claves de socio | ✅ El socio se la crea solo verificando su teléfono. |
+| Editar socio | ✅ Incluye corregir el DNI, requisito del import. |
+| Bitácora de ingresos | ✅ `/asistencias`, solo lectura, con filtros. |
 | Rutinas (subir/descargar) | ❌ No empezado. **Necesita la cuenta de Supabase.** |
 | Import de la planilla | ❌ No empezado. |
 
@@ -87,9 +89,11 @@ Rutas que ya existen:
 | `/socios` | Vista planilla: filtros, estado al costado, cobro en un click | Sí |
 | `/socios/nuevo` | Alta de socio | Sí |
 | `/socios/[id]` | Ficha: pagos, ingresos, registrar pago, dar de baja | Sí |
+| `/socios/[id]/editar` | Corregir datos del socio, incluido el DNI | Sí |
+| `/asistencias` | Bitácora de ingresos con filtros por período | Sí |
 | `/recepcion` | Pantalla de puerta | Sí |
 
-Otros comandos: `npm test` (32 tests), `npm run build`, `npm run lint`, `npm run db:studio` (ver la base), `npm run db:seed`.
+Otros comandos: `npm test` (50 tests), `npm run build`, `npm run lint`, `npm run db:studio` (ver la base), `npm run db:seed`.
 
 ## Decisiones ya tomadas
 - **Stack:** Next.js 16 (App Router) + **PostgreSQL + Prisma 7** + NextAuth v5 + Tailwind v4/shadcn. Archivos de rutina en Supabase Storage. Deploy en Vercel + Supabase.
@@ -182,6 +186,7 @@ También se agregaron `mensajeParaAdmin()` y `mensajeParaSocio()` en `src/lib/cu
 - La landing tiene los datos del gimnasio hardcodeados. Si el dueño los quiere editar solo, hay que sacarlos a la base.
 
 ## Bitácora
+- **19/08/2026** — **Editar socio y bitácora de ingresos.** Hasta ahora un socio se podía crear y dar de baja, pero no corregir: un nombre mal tipeado quedaba así para siempre. `/socios/[id]/editar` permite arreglar nombre, apellido, teléfono, email, sede y **el DNI**. Eso último no es un capricho: la importación de la planilla mete a los 349 socios con un DNI provisorio, y el momento de corregirlo es cuando la persona aparece por la puerta — sin esta pantalla el import no se puede cerrar. El DNI sigue siendo único, así que se chequea contra el resto antes de guardar y se avisa quién lo tiene. La clave y el estado se editan aparte, para que un error tipeando el teléfono no pueda dejar a alguien afuera. Además `/asistencias`: la bitácora de ingresos con filtros por hoy, 7 y 30 días, búsqueda por socio y el conteo de personas distintas. Solo lectura, como manda la Regla de Oro 3 — en `src/lib/asistencias.ts` no hay ni va a haber una función que modifique. 5 tests nuevos (50 en total).
 - **19/08/2026** — **Claves de socio (bloque C del plan).** El socio se crea su propia clave desde su pantalla, verificando los **últimos 4 dígitos del teléfono** que ya tenemos cargado: es el segundo dato que un desconocido con solo el DNI no tiene. Con 349 socios, ponerles la clave de a uno era inviable. La sesión pasa a tener **dos niveles**: `BASICO` (DNI solo) ve cuota, plan, pagos e ingresos, y `COMPLETO` (con clave) va a ser el único que descargue la rutina. El nivel viaja dentro de lo firmado con HMAC — verificado que una cookie con el nivel cambiado a mano se rechaza. Si el socio no tiene teléfono cargado no se le deja crear clave: sin segundo dato, cualquiera que sepa el DNI se quedaría con la cuenta ajena. Queda el reinicio de clave desde la ficha, para el que cambió de número. 13 tests nuevos (45 en total).
   - **Desvío del plan, a propósito:** el plan decía reemplazar `sesion-socio.ts` por NextAuth. Se mantuvo la cookie propia porque el modelo de dos niveles se expresa mejor ahí y la propiedad de seguridad es la misma (HMAC, `httpOnly`, vencimiento). Meter a los socios en NextAuth agregaba un provider y el riesgo de que una sesión de socio pase por algún chequeo pensado para admins, a cambio de nada.
 - **19/08/2026** — **Modo claro/oscuro y responsive completo (bloques A y B del plan).** `next-themes` estaba instalado pero sin conectar: el panel era siempre claro y la parte pública siempre oscura. Ahora hay `ProveedorTema` en el layout raíz y un `BotonTema` en las cuatro superficies, arrancando con el tema del dispositivo y guardando la elección. El botón dibuja los dos íconos y deja que CSS muestre el que corresponde, en vez de usar estado de "ya monté": así sale igual del servidor y del cliente, sin parpadeo ni desajuste de hidratación. Las páginas públicas dejan de tener `bg-neutral-950` hardcodeado y pasan a tokens (`bg-background`, `text-muted-foreground`, `border-border`), y el verde de la marca usa `emerald-600` en claro porque el 400 no contrasta sobre blanco. Además: el historial desplegado ya no tapa el tinte de la fila, y las dos tablas que faltaban — personal y los pagos de la ficha — tienen tarjetas apiladas en celular.

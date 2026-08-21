@@ -312,6 +312,83 @@ export async function obtenerHistorialDePagos(
   }));
 }
 
+const esquemaEdicion = esquemaSocio.extend({
+  usuario_id: z.string().trim().min(1),
+});
+
+/**
+ * Corrige los datos de un socio ya cargado.
+ *
+ * El DNI se puede cambiar a propósito: los socios que vienen de la planilla
+ * entran con un DNI provisorio, y el momento de corregirlo es cuando la
+ * persona aparece por la puerta. Sigue siendo único (Regla de Oro 1), así que
+ * se chequea contra el resto antes de guardar.
+ *
+ * No se toca la clave ni el estado: cada uno tiene su propia acción, para que
+ * un error tipeando el teléfono no pueda dejar a alguien afuera del sistema.
+ */
+export async function editarSocio(
+  _estadoPrevio: EstadoFormulario,
+  formData: FormData,
+): Promise<EstadoFormulario> {
+  await exigirAdmin();
+
+  const parseado = esquemaEdicion.safeParse({
+    usuario_id: formData.get("usuario_id"),
+    dni: formData.get("dni"),
+    nombre: formData.get("nombre"),
+    apellido: formData.get("apellido"),
+    telefono: formData.get("telefono") ?? undefined,
+    email: formData.get("email") ?? undefined,
+    sede_id: formData.get("sede_id"),
+  });
+
+  if (!parseado.success) {
+    return { error: parseado.error.issues[0]?.message ?? "Datos inválidos." };
+  }
+
+  const datos = parseado.data;
+
+  const socio = await prisma.usuario.findFirst({
+    where: { id: datos.usuario_id, rol: "CLIENTE" },
+    select: { id: true, dni: true },
+  });
+
+  if (!socio) {
+    return { error: "Ese socio no existe." };
+  }
+
+  // Regla de Oro 1: si cambió el DNI, no puede chocar con el de otra persona.
+  if (datos.dni !== socio.dni) {
+    const ocupado = await prisma.usuario.findUnique({
+      where: { dni: datos.dni },
+      select: { nombre: true, apellido: true },
+    });
+
+    if (ocupado) {
+      return {
+        error: `El DNI ${datos.dni} ya lo tiene ${ocupado.apellido}, ${ocupado.nombre}.`,
+      };
+    }
+  }
+
+  await prisma.usuario.update({
+    where: { id: socio.id },
+    data: {
+      dni: datos.dni,
+      nombre: datos.nombre,
+      apellido: datos.apellido,
+      telefono: datos.telefono || null,
+      email: datos.email || null,
+      sede_id: datos.sede_id,
+    },
+  });
+
+  revalidatePath(`/socios/${socio.id}`);
+  revalidatePath("/socios");
+  redirect(`/socios/${socio.id}`);
+}
+
 const esquemaClaveSocio = z.object({
   usuario_id: z.string().trim().min(1),
   clave: z

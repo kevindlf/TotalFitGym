@@ -15,6 +15,7 @@ import { auth } from "@/lib/auth";
 const SECCIONES = [
   { href: "/dashboard", texto: "Panel" },
   { href: "/socios", texto: "Socios" },
+  { href: "/asistencias", texto: "Ingresos" },
   { href: "/personal", texto: "Personal" },
 ];
 

@@ -74,6 +74,14 @@ export default async function PaginaSocio({
         <p className="text-muted-foreground">
           {mensajeParaAdmin(socio.cuota, socio.nombre)}
         </p>
+
+        <Button
+          render={<Link href={`/socios/${socio.id}/editar`} />}
+          variant="outline"
+          size="sm"
+        >
+          Editar datos
+        </Button>
       </header>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

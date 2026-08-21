@@ -4,14 +4,19 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-import { registrarPago, repetirUltimoPago } from "./acciones";
+import { editarSocio, registrarPago, repetirUltimoPago } from "./acciones";
 
 vi.mock("@/lib/auth", () => ({ auth: vi.fn() }));
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     pago: { findFirst: vi.fn(), create: vi.fn() },
-    usuario: { findFirst: vi.fn(), findUnique: vi.fn(), create: vi.fn() },
+    usuario: {
+      findFirst: vi.fn(),
+      findUnique: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+    },
   },
 }));
 
@@ -27,6 +32,8 @@ const sesion = vi.mocked(auth);
 const buscarPago = vi.mocked(prisma.pago.findFirst);
 const crearPago = vi.mocked(prisma.pago.create);
 const buscarUsuario = vi.mocked(prisma.usuario.findFirst);
+const buscarPorDni = vi.mocked(prisma.usuario.findUnique);
+const actualizarUsuario = vi.mocked(prisma.usuario.update);
 
 const ADMIN = { user: { id: "admin_1", rol: "ADMIN" } };
 
@@ -143,5 +150,88 @@ describe("registrarPago sin fecha", () => {
 
     expect(resultado.error).toContain("mayor a cero");
     expect(crearPago).not.toHaveBeenCalled();
+  });
+});
+
+// Corregir el DNI es el caso que destraba la importación de la planilla: los
+// socios entran con un DNI provisorio y se arregla cuando la persona aparece.
+describe("editarSocio", () => {
+  function formularioDeEdicion(cambios: Record<string, string> = {}) {
+    const datos = new FormData();
+    datos.set("usuario_id", "socio_1");
+    datos.set("dni", "30123456");
+    datos.set("nombre", "Ana");
+    datos.set("apellido", "Gómez");
+    datos.set("sede_id", "sede_1");
+
+    for (const [campo, valor] of Object.entries(cambios)) {
+      datos.set(campo, valor);
+    }
+
+    return datos;
+  }
+
+  it("guarda los datos nuevos y vuelve a la ficha", async () => {
+    buscarUsuario.mockResolvedValue({ id: "socio_1", dni: "30123456" } as never);
+
+    await expect(
+      editarSocio({}, formularioDeEdicion({ telefono: "2364112345" })),
+    ).rejects.toThrow("redirigido");
+
+    const { data } = actualizarUsuario.mock.calls[0]![0] as {
+      data: Record<string, unknown>;
+    };
+
+    expect(data.telefono).toBe("2364112345");
+    expect(data.nombre).toBe("Ana");
+  });
+
+  it("deja cambiar el DNI si nadie más lo tiene", async () => {
+    buscarUsuario.mockResolvedValue({ id: "socio_1", dni: "900000001" } as never);
+    buscarPorDni.mockResolvedValue(null);
+
+    await expect(
+      editarSocio({}, formularioDeEdicion({ dni: "30123456" })),
+    ).rejects.toThrow("redirigido");
+
+    const { data } = actualizarUsuario.mock.calls[0]![0] as {
+      data: Record<string, unknown>;
+    };
+
+    expect(data.dni).toBe("30123456");
+  });
+
+  // Regla de Oro 1: el DNI no se puede duplicar ni corrigiendo.
+  it("rechaza un DNI que ya tiene otra persona", async () => {
+    buscarUsuario.mockResolvedValue({ id: "socio_1", dni: "900000001" } as never);
+    buscarPorDni.mockResolvedValue({
+      nombre: "Bruno",
+      apellido: "Álvarez",
+    } as never);
+
+    const resultado = await editarSocio({}, formularioDeEdicion({ dni: "30123456" }));
+
+    expect(resultado.error).toContain("Álvarez");
+    expect(actualizarUsuario).not.toHaveBeenCalled();
+  });
+
+  it("no consulta duplicados si el DNI no cambió", async () => {
+    buscarUsuario.mockResolvedValue({ id: "socio_1", dni: "30123456" } as never);
+
+    await expect(editarSocio({}, formularioDeEdicion())).rejects.toThrow(
+      "redirigido",
+    );
+
+    expect(buscarPorDni).not.toHaveBeenCalled();
+  });
+
+  it("rechaza a quien no es admin antes de tocar la base", async () => {
+    sesion.mockResolvedValue({ user: { id: "x", rol: "CLIENTE" } } as never);
+
+    await expect(editarSocio({}, formularioDeEdicion())).rejects.toThrow(
+      "redirigido a /ingresar",
+    );
+
+    expect(actualizarUsuario).not.toHaveBeenCalled();
   });
 });

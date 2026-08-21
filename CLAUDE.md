@@ -98,7 +98,8 @@ Estado real del proyecto (difiere del plan original: `/prisma` va en la raíz po
     /(cliente)/mi-cuenta   # portal del socio (cuota, pagos, ingresos, rutina)
     /(admin)               # layout con verificación de sesión ADMIN
       /dashboard           # contadores, caja del mes, morosos
-      /socios              # vista planilla + alta + ficha del socio
+      /socios              # vista planilla + alta + ficha + edición
+      /asistencias         # bitácora de ingresos (solo lectura)
       /personal            # alta de profes/empleados
     /recepcion             # pantalla de puerta (DNI → verde/amarillo/rojo)
     /api
@@ -106,7 +107,8 @@ Estado real del proyecto (difiere del plan original: `/prisma` va en la raíz po
   /components
     /admin  /publico  /recepcion  /ui
   /lib                     # prisma, auth, cuota, pases, socios, personal, metricas,
-                           # portal, recepcion, formato, gimnasio, sesion-socio
+                           # portal, recepcion, asistencias, formato, gimnasio,
+                           # sesion-socio
   /proxy.ts                # el "middleware" de Next 16
   /generated/prisma        # cliente generado (gitignoreado)
 ```
@@ -121,6 +123,8 @@ Estado real del proyecto (difiere del plan original: `/prisma` va en la raíz po
 | `/dashboard` | ADMIN | Contadores derivados, cobrado del mes, morosos, próximos a vencer |
 | `/socios` | ADMIN | Vista planilla con filtros y cobro en un click |
 | `/socios/[id]` | ADMIN | Ficha: pagos con quién cobró, ingresos, registrar pago, baja lógica |
+| `/socios/[id]/editar` | ADMIN | Corregir datos, incluido el DNI (sigue siendo único) |
+| `/asistencias` | ADMIN | Bitácora de ingresos, solo lectura |
 | `/personal` | ADMIN | Alta de profes/empleados, reset de contraseña, baja |
 | `/recepcion` | ADMIN | Puerta: DNI → verde/amarillo/naranja/rojo + asistencia |
 
