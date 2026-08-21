@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { hash } from "bcryptjs";
+
 import { auth } from "@/lib/auth";
 import { formatearFecha } from "@/lib/formato";
 import { calcularFechaVencimiento } from "@/lib/pases";
@@ -308,6 +310,54 @@ export async function obtenerHistorialDePagos(
     metodo_pago: pago.metodo_pago,
     cobro: `${pago.admin.nombre} ${pago.admin.apellido}`,
   }));
+}
+
+const esquemaClaveSocio = z.object({
+  usuario_id: z.string().trim().min(1),
+  clave: z
+    .string()
+    .min(8, "La clave necesita al menos 8 caracteres."),
+});
+
+/**
+ * Reinicia la clave de un socio que se la olvidó.
+ *
+ * El socio se la crea solo desde su pantalla verificando el teléfono, así que
+ * esto es solo la salida de emergencia: alguien que cambió de número o que se
+ * la olvidó y viene al mostrador.
+ */
+export async function reiniciarClaveDelSocio(
+  _estadoPrevio: EstadoFormulario,
+  formData: FormData,
+): Promise<EstadoFormulario> {
+  await exigirAdmin();
+
+  const parseado = esquemaClaveSocio.safeParse({
+    usuario_id: formData.get("usuario_id"),
+    clave: formData.get("clave"),
+  });
+
+  if (!parseado.success) {
+    return { error: parseado.error.issues[0]?.message ?? "Datos inválidos." };
+  }
+
+  const socio = await prisma.usuario.findFirst({
+    where: { id: parseado.data.usuario_id, rol: "CLIENTE" },
+    select: { id: true, nombre: true },
+  });
+
+  if (!socio) {
+    return { error: "Ese socio no existe." };
+  }
+
+  await prisma.usuario.update({
+    where: { id: socio.id },
+    data: { password: await hash(parseado.data.clave, 12) },
+  });
+
+  revalidatePath(`/socios/${socio.id}`);
+
+  return { ok: `Clave de ${socio.nombre} actualizada. Decísela en persona.` };
 }
 
 export async function cambiarEstadoSocio(

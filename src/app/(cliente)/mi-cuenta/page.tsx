@@ -14,6 +14,8 @@ import {
 import { ETIQUETAS_TIPO_PASE } from "@/lib/pases";
 import { obtenerDetalleDelSocio } from "@/lib/portal";
 import { cerrarSesionDelSocio, leerSesionDelSocio } from "@/lib/sesion-socio";
+
+import { CrearClave } from "./crear-clave";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Mi cuenta · Total Fit" };
@@ -28,13 +30,13 @@ const PANEL: Record<EstadoCuota, string> = {
 };
 
 export default async function PaginaMiCuenta() {
-  const usuarioId = await leerSesionDelSocio();
+  const sesion = await leerSesionDelSocio();
 
-  if (!usuarioId) {
+  if (!sesion) {
     redirect("/ingresar");
   }
 
-  const socio = await obtenerDetalleDelSocio(usuarioId);
+  const socio = await obtenerDetalleDelSocio(sesion.usuarioId);
 
   if (!socio) {
     redirect("/ingresar");
@@ -123,16 +125,45 @@ export default async function PaginaMiCuenta() {
           ) : null}
         </section>
 
-        {/* ---- rutina (todavía no) ---- */}
+        {/* ---- rutina ---- */}
         <section className="rounded-xl border border-border bg-muted/50 p-5">
           <h2 className="flex items-center gap-2.5 text-lg font-semibold">
-            <Dumbbell className="size-5 text-emerald-600 dark:text-emerald-400" aria-hidden />
+            <Dumbbell
+              className="size-5 text-emerald-600 dark:text-emerald-400"
+              aria-hidden
+            />
             Mi rutina
           </h2>
-          <p className="mt-2 text-muted-foreground">
-            Todavía no está disponible. Cuando tu profe la cargue, la vas a
-            poder ver y descargar desde acá.
-          </p>
+
+          {sesion.nivel === "COMPLETO" ? (
+            <p className="mt-2 text-muted-foreground">
+              Todavía no está disponible. Cuando tu profe la cargue, la vas a
+              poder ver y descargar desde acá.
+            </p>
+          ) : socio.tieneClave ? (
+            <>
+              <p className="mt-2 text-muted-foreground">
+                Para ver tu rutina volvé a entrar poniendo tu clave. Tu rutina
+                es tuya: no queremos que la vea cualquiera que sepa tu DNI.
+              </p>
+              <Button
+                render={<Link href="/ingresar" />}
+                variant="outline"
+                className="mt-4"
+              >
+                Entrar con mi clave
+              </Button>
+            </>
+          ) : (
+            <>
+              <p className="mt-2 text-muted-foreground">
+                Creá una clave para poder descargar tu rutina. Con el DNI solo
+                alcanza para ver tu cuota, pero un archivo tuyo no puede quedar
+                detrás de un dato que cualquiera puede adivinar.
+              </p>
+              <CrearClave dni={socio.dni} />
+            </>
+          )}
         </section>
 
         {/* ---- historial de pagos ---- */}

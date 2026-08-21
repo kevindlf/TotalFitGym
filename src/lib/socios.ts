@@ -22,6 +22,7 @@ const SELECCION_SOCIO = {
   email: true,
   estado: true,
   fecha_registro: true,
+  password: true,
   sede: { select: { id_sede: true, nombre: true } },
   pagos: {
     orderBy: { fecha_vencimiento: "desc" },
@@ -55,6 +56,7 @@ export interface SocioConCuota {
   estado: "ACTIVO" | "INACTIVO";
   fecha_registro: Date;
   sede: { id_sede: string; nombre: string };
+  tieneClave: boolean;
   cuota: ResultadoCuota;
   ultimoPago: UltimoPago | null;
   /** Cuánto pagó en total desde que es socio. */
@@ -72,6 +74,7 @@ type SocioCrudo = {
   estado: "ACTIVO" | "INACTIVO";
   fecha_registro: Date;
   sede: { id_sede: string; nombre: string };
+  password: string | null;
   pagos: {
     fecha_vencimiento: Date;
     fecha_pago: Date;
@@ -85,11 +88,12 @@ function conCuota(
   socio: SocioCrudo,
   totales?: { total: number; cantidad: number },
 ): SocioConCuota {
-  const { pagos, ...resto } = socio;
+  const { pagos, password, ...resto } = socio;
   const ultimo = pagos.at(0);
 
   return {
     ...resto,
+    tieneClave: password !== null,
     cuota: calcularEstadoCuota(ultimo?.fecha_vencimiento ?? null),
     ultimoPago: ultimo
       ? {

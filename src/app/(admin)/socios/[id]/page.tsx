@@ -23,6 +23,7 @@ import { ETIQUETAS_TIPO_PASE } from "@/lib/pases";
 import { obtenerSocio } from "@/lib/socios";
 
 import { cambiarEstadoSocio } from "../acciones";
+import { ClaveSocio } from "./clave-socio";
 import { FormularioPago } from "./formulario-pago";
 
 export const dynamic = "force-dynamic";
@@ -219,7 +220,20 @@ export default async function PaginaSocio({
         )}
       </section>
 
-      <section className="border-t pt-6">
+      <section className="space-y-4 border-t pt-6">
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">
+            Clave para la rutina
+          </h2>
+          <div className="mt-2">
+            <ClaveSocio
+              usuarioId={socio.id}
+              nombre={socio.nombre}
+              tieneClave={socio.tieneClave}
+            />
+          </div>
+        </div>
+
         <form
           action={async () => {
             "use server";

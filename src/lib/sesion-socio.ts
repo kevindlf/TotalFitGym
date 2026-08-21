@@ -3,23 +3,37 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 
 /**
- * Sesión liviana del socio.
+ * Sesión del socio, con dos niveles de confianza.
  *
- * El socio entra solo con su DNI, sin contraseña (CLAUDE.md §2: password
- * opcional para CLIENTE en v1). Necesitamos igual recordar a quién consultó
- * para poder mostrarle su propia pantalla sin poner el DNI en la URL: una URL
- * se comparte, queda en el historial y se filtra por el `Referer`.
+ * - `BASICO`: entró solo con su DNI. Ve su cuota, su plan, sus pagos y sus
+ *   ingresos. Es información que ya le dirían por teléfono en recepción.
+ * - `COMPLETO`: además puso su contraseña. Solo este nivel descarga la rutina,
+ *   porque un archivo personal no puede quedar detrás de un dato tan fácil de
+ *   adivinar como el DNI.
  *
- * La cookie va firmada con HMAC y `httpOnly`, así el navegador no la puede
- * leer ni el socio puede editarla para ver la ficha de otro. Dura poco: es
- * para una consulta, no para dejar la sesión abierta.
+ * La cookie va firmada con HMAC y `httpOnly`: el navegador no la puede leer y
+ * el socio no puede editarla para subirse de nivel ni para ver la ficha de
+ * otro. El nivel viaja *dentro* de lo firmado, así que cambiarlo invalida la
+ * firma.
  *
- * Cuando existan contraseñas de socio, esto se reemplaza por NextAuth y se
- * borra el archivo.
+ * No se usa el DNI en la URL a propósito: una URL se comparte, queda en el
+ * historial y se filtra por el `Referer`.
  */
 
 const NOMBRE_COOKIE = "totalfit_socio";
-const DURACION_SEGUNDOS = 30 * 60;
+
+export type NivelDeSesion = "BASICO" | "COMPLETO";
+
+/** Con clave dura más: es una sesión de verdad, no una consulta de paso. */
+const DURACION: Record<NivelDeSesion, number> = {
+  BASICO: 30 * 60,
+  COMPLETO: 12 * 60 * 60,
+};
+
+export interface SesionDelSocio {
+  usuarioId: string;
+  nivel: NivelDeSesion;
+}
 
 function clave(): string {
   const secreto = process.env.AUTH_SECRET;
@@ -46,34 +60,42 @@ function firmaValida(payload: string, firma: string): boolean {
   );
 }
 
-export async function crearSesionDelSocio(usuarioId: string): Promise<void> {
-  const expira = Date.now() + DURACION_SEGUNDOS * 1000;
-  const payload = `${usuarioId}.${expira}`;
+export async function crearSesionDelSocio(
+  usuarioId: string,
+  nivel: NivelDeSesion,
+): Promise<void> {
+  const segundos = DURACION[nivel];
+  const expira = Date.now() + segundos * 1000;
+  const payload = `${usuarioId}.${nivel}.${expira}`;
 
   (await cookies()).set(NOMBRE_COOKIE, `${payload}.${firmar(payload)}`, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
-    maxAge: DURACION_SEGUNDOS,
+    maxAge: segundos,
     path: "/",
   });
 }
 
-/** Devuelve el id del socio de la sesión, o `null` si no hay o no es válida. */
-export async function leerSesionDelSocio(): Promise<string | null> {
+/** Devuelve la sesión del socio, o `null` si no hay o no es válida. */
+export async function leerSesionDelSocio(): Promise<SesionDelSocio | null> {
   const cookie = (await cookies()).get(NOMBRE_COOKIE)?.value;
 
   if (!cookie) {
     return null;
   }
 
-  const [usuarioId, expira, firma] = cookie.split(".");
+  const [usuarioId, nivel, expira, firma] = cookie.split(".");
 
-  if (!usuarioId || !expira || !firma) {
+  if (!usuarioId || !nivel || !expira || !firma) {
     return null;
   }
 
-  if (!firmaValida(`${usuarioId}.${expira}`, firma)) {
+  if (nivel !== "BASICO" && nivel !== "COMPLETO") {
+    return null;
+  }
+
+  if (!firmaValida(`${usuarioId}.${nivel}.${expira}`, firma)) {
     return null;
   }
 
@@ -81,7 +103,7 @@ export async function leerSesionDelSocio(): Promise<string | null> {
     return null;
   }
 
-  return usuarioId;
+  return { usuarioId, nivel };
 }
 
 export async function cerrarSesionDelSocio(): Promise<void> {

@@ -17,7 +17,7 @@ Escala real actual (planilla): ~349 socios (216 activos, 117 vencidos, 16 próxi
 - **Framework:** Next.js (App Router) + TypeScript
 - **Base de datos:** **PostgreSQL + Prisma** (alojado en **Supabase**)
 - **Almacenamiento de archivos (rutinas):** Supabase Storage
-- **Auth:** NextAuth (credenciales). Admins con password obligatorio; clientes con password opcional en v1.
+- **Auth:** NextAuth (credenciales) para el personal. Los socios entran con DNI y, si crearon clave, con clave — sesión propia firmada con HMAC, ver §9.
 - **UI:** Tailwind CSS + shadcn/ui
 - **Deploy:** Vercel + Supabase
 
@@ -76,7 +76,8 @@ Sede → Usuarios · Usuario(cliente) → Pagos · Usuario(cliente) → Asistenc
 - [x] **Gestión del personal**: el admin da de alta a los profes/empleados que cobran.
 - [x] **Página pública** del gimnasio + puerta única de ingreso.
 - [x] **Portal cliente**: pantalla propia con su cuota, su plan, sus pagos y sus ingresos.
-- [ ] **Descarga de rutina** por el socio. Requiere claves de socio: un archivo personal no puede quedar detrás de un dato tan adivinable como el DNI.
+- [x] **Claves de socio**: se las crea el propio socio verificando los últimos 4 dígitos de su teléfono.
+- [ ] **Descarga de rutina** por el socio. Ya hay clave; falta el almacenamiento (Supabase Storage).
 - [ ] Carga de **rutina** por el admin (subir PDF/imagen a Supabase Storage).
 - [ ] Script de **importación** de la planilla actual (ver sección 7).
 
@@ -116,7 +117,7 @@ Estado real del proyecto (difiere del plan original: `/prisma` va en la raíz po
 |---|---|---|
 | `/` | Cualquiera | Landing: qué es el gimnasio, actividades, planes, horarios, ubicación |
 | `/ingresar` | Cualquiera | **Puerta única.** Con DNI solo → portal del socio. Con DNI + password → panel |
-| `/mi-cuenta` | Socio (cookie firmada) | Su cuota, su plan, sus pagos, sus ingresos y —más adelante— su rutina |
+| `/mi-cuenta` | Socio (cookie firmada) | Su cuota, su plan, sus pagos, sus ingresos y —con clave— su rutina |
 | `/dashboard` | ADMIN | Contadores derivados, cobrado del mes, morosos, próximos a vencer |
 | `/socios` | ADMIN | Vista planilla con filtros y cobro en un click |
 | `/socios/[id]` | ADMIN | Ficha: pagos con quién cobró, ingresos, registrar pago, baja lógica |
@@ -147,7 +148,8 @@ Planilla "Asistencia socios junin": Nombre, Plan, Monto, Medio de pago, Fecha de
 - **El color nunca comunica solo.** Cada estado lleva además ícono o texto: la pantalla de la puerta se lee de lejos y de reojo, y un recepcionista daltónico tiene que poder usarla.
 - **Acciones de servidor con `(estadoPrevio, formData)`**, no envueltas en closures. Así Next les da progressive enhancement y siguen andando si el JavaScript no cargó — cosa que importa en la PC del mostrador.
 - **Los datos del gimnasio** (dirección, teléfono, horarios, actividades, qué incluye cada plan) viven en `src/lib/gimnasio.ts`. Cambian dos veces por año y no justifican una tabla ni una pantalla de administración.
-- **El socio nunca viaja en la URL.** Su sesión es una cookie `httpOnly` firmada con HMAC (`src/lib/sesion-socio.ts`), no un DNI en el path: una URL se comparte, queda en el historial y se filtra por el `Referer`. Cuando existan contraseñas de socio, eso se reemplaza por NextAuth.
+- **El socio nunca viaja en la URL.** Su sesión es una cookie `httpOnly` firmada con HMAC (`src/lib/sesion-socio.ts`), no un DNI en el path: una URL se comparte, queda en el historial y se filtra por el `Referer`.
+- **La sesión del socio tiene dos niveles.** `BASICO` (entró con DNI solo) ve cuota, plan, pagos e ingresos — información que en recepción le darían por teléfono. `COMPLETO` (además puso su clave) es el único que descarga la rutina. El nivel viaja **dentro** de lo firmado, así que editarlo invalida la firma. El socio se crea la clave solo, verificando los últimos 4 dígitos del teléfono que ya está en su ficha.
 
 ## 10. Notas de versiones (Fase 1)
 
