@@ -1,206 +1,217 @@
 # PROGRESO.md — Total Fit
 
-> Bitácora viva del proyecto. Claude Code: actualizá este archivo al final de cada sesión (qué se hizo, qué sigue, qué se decidió). El detalle técnico completo está en `CLAUDE.md`.
+> **Bitácora viva.** Este archivo es el punto de entrada para retomar el proyecto en una sesión nueva. Al terminar cada sesión actualizalo: qué se hizo, qué se decidió y por qué. El detalle técnico completo está en `CLAUDE.md`.
 
-## Estado actual — 19/08/2026
+---
 
-**Fase 1 CERRADA y verificada contra la base real.** La base `totalfit_dev` existe, la migración está aplicada y el seed cargó datos. Login, recepción, panel y portal probados de punta a punta con datos reales.
+# ▶ EMPEZÁ ACÁ
 
-### Las 4 Reglas de Oro, verificadas contra la base
+**Última sesión: 19/08/2026.** El sistema funciona de punta a punta contra una base real. 25 commits en `github.com/kevindlf/TotalFitGym`, 50 tests, `build` y `lint` limpios.
 
-| Regla | Cómo se verificó | Resultado |
-|---|---|---|
-| 1 · DNI único | `INSERT` con un DNI repetido | ❌ rechazado por `Usuario_dni_key` ✅ |
-| 2 · Puerta | Consulta de los 4 DNI demo + uno inexistente | verde / amarillo / rojo / rojo / rojo ✅ |
-| 3 · Asistencias inmutables | Conteo de asistencias por socio tras las consultas | solo los 2 que pasaron tienen fila ✅ |
-| 4 · Trazabilidad | `JOIN` de pagos con su admin | los 3 pagos tienen dueño, ninguno anónimo ✅ |
-
-También verificado en el login: un socio (rol CLIENTE) **no puede** entrar al panel, y una contraseña incorrecta no crea sesión.
-
-| Superficie | Estado |
-|---|---|
-| Página pública (`/`) | ✅ Landing completa. Faltan las fotos y los datos reales. |
-| Ingreso unificado (`/ingresar`) | ✅ Socio con DNI, personal con DNI + contraseña. |
-| Recepción (puerta) | ✅ Hecha y probada. |
-| Dashboard del dueño | ✅ Hecho y probado. |
-| Socios — vista planilla | ✅ Filtros, estado al costado, cobro en un click. |
-| Registro de pagos | ✅ Hecho y probado. |
-| Portal del cliente | ✅ Pantalla propia con cuota, plan, pagos e ingresos. |
-| Personal (alta de profes/empleados) | ✅ Hecho y probado. |
-| Responsive / mobile | ✅ Tarjetas en celular, tabla en escritorio, en las 3 tablas. |
-| Modo claro / oscuro | ✅ Botón en las 4 superficies, arranca con el del sistema. |
-| Claves de socio | ✅ El socio se la crea solo verificando su teléfono. |
-| Editar socio | ✅ Incluye corregir el DNI, requisito del import. |
-| Bitácora de ingresos | ✅ `/asistencias`, solo lectura, con filtros. |
-| Rutinas (subir/descargar) | ❌ No empezado. **Necesita la cuenta de Supabase.** |
-| Import de la planilla | ❌ No empezado. |
-
-### ✅ Base de datos local — resuelto
-
-Corriendo en PostgreSQL 18 local, base `totalfit_dev`, rol dedicado `totalfit`. Migración aplicada (`20260819022858_init`) y seed ejecutado.
-
-**Cómo se llegó ahí** (queda registrado por si hay que repetirlo en otra máquina):
-
-1. Docker no está instalado → se descartó.
-2. La máquina ya tiene **PostgreSQL 18** corriendo como servicio (`postgresql-x64-18`, arranque automático, escuchando en 5432). Se decidió usar ese.
-3. `pg_hba.conf` exige `scram-sha-256`, o sea password. Se probaron las dos candidatas que pasó Kevin (`6032` y `root`): las dos dan `la autentificación password falló para el usuario postgres`.
-4. No hay credencial guardada en ningún lado: no existe `pgpass.conf`, no está `PGPASSWORD`, y ninguno de los 8 `.env` del directorio `c:\Programación` apunta a un Postgres local.
-5. Recargar la config de Postgres necesita permisos de Administrador, que Claude Code no tiene.
-
-**Solución elegida:** en vez de cambiar la password del superusuario `postgres` (que rompería cualquier otra cosa que la use), se crea un **rol dedicado `totalfit`** dueño de la base `totalfit_dev`. El superusuario queda intacto y la app corre con permisos mínimos.
-
-Kevin corrió un script como Administrador que hizo backup de `pg_hba.conf`, lo puso en `trust` unos segundos, creó rol y base, y lo restauró. La password del superusuario `postgres` **sigue siendo desconocida** — si algún día hace falta, hay que repetir ese procedimiento.
-
-`.env.local` (gitignoreado) tiene `AUTH_SECRET`, la conexión y las credenciales del seed.
-
-### Usuarios cargados hoy (datos de prueba)
-
-| DNI | Quién | Para qué |
-|---|---|---|
-| `20000001` | Kevin Admin | Tu usuario. **Cambiá el DNI por el real.** |
-| `20000002` | Fernando Profe | Alta de personal de prueba. Su contraseña se resetea desde `/personal`. |
-| `10000001` | Ana Gómez | Socio al día → verde |
-| `10000002` | Bruno Álvarez | Vence en 3 días → amarillo |
-| `10000003` | Carla Ibáñez | Venció hace 10 días → rojo |
-| `10000004` | Diego Sosa | Nunca pagó → rojo |
-
-> Los apellidos eran los colores del estado ("Ana Verde", "Carla Roja") y en la planilla parecía que el sistema escribía el color en la columna del nombre. Cambiados por apellidos comunes.
-
-Las contraseñas están en `.env.local`, que está gitignoreado y nunca se sube. **Todos estos usuarios hay que borrarlos antes de usar el sistema en serio.**
-
-> Regla para este repo: **ninguna contraseña se escribe en un archivo versionado**, ni siquiera de una cuenta de prueba. Van en `.env.local` o se pasan por otro lado.
-
-## Cómo levantar el proyecto
+### Lo primero: levantarlo
 
 ```powershell
 cd "c:\Programación\TotalFit_Gimnasio"
 npm run dev          # http://localhost:3000
 ```
 
-Rutas que ya existen:
+La base local ya existe (`totalfit_dev` en el PostgreSQL 18 de la máquina) y `.env.local` ya está completo. Si algo no arranca, mirá la sección "Base de datos local" más abajo.
 
-| Ruta | Qué es | Necesita base |
+**Entrar al panel:** DNI `20000001`. La contraseña está en `.env.local`, en `SEED_ADMIN_PASSWORD`.
+
+### Lo único que falta, y qué lo bloquea
+
+| Falta | Bloqueado por | Quién |
 |---|---|---|
-| `/` | Landing: gimnasio, actividades, planes, horarios, ubicación | No |
-| `/ingresar` | **Puerta única.** Socio con DNI · personal con DNI + contraseña | Sí |
-| `/mi-cuenta` | Pantalla del socio: cuota, plan, pagos, ingresos, rutina | Sí |
-| `/dashboard` | Panel del dueño: contadores, caja del mes, morosos | Sí |
-| `/personal` | Alta de profes/empleados, reset de contraseña, baja | Sí |
-| `/socios` | Vista planilla: filtros, estado al costado, cobro en un click | Sí |
-| `/socios/nuevo` | Alta de socio | Sí |
-| `/socios/[id]` | Ficha: pagos, ingresos, registrar pago, dar de baja | Sí |
-| `/socios/[id]/editar` | Corregir datos del socio, incluido el DNI | Sí |
-| `/asistencias` | Bitácora de ingresos con filtros por período | Sí |
-| `/recepcion` | Pantalla de puerta | Sí |
+| **Rutinas** — subir PDF y que el socio lo baje | Cuenta de Supabase | Kevin |
+| **Importar los 349 socios** de la planilla | El CSV de la planilla | Kevin |
+| **Deploy** en Vercel + Supabase | Lo de arriba | Kevin |
+| **Datos reales del gimnasio** en `src/lib/gimnasio.ts` | Dirección, teléfono, Instagram, mail | Kevin |
+| **Las 3 fotos** en `public/fotos/` | `portada.jpg`, `sala.jpg`, `frente.jpg` | Kevin |
 
-Otros comandos: `npm test` (50 tests), `npm run build`, `npm run lint`, `npm run db:studio` (ver la base), `npm run db:seed`.
+**No hay nada más que se pueda avanzar sin esas cinco cosas.** Todo lo demás del MVP está hecho.
 
-## Decisiones ya tomadas
-- **Stack:** Next.js 16 (App Router) + **PostgreSQL + Prisma 7** + NextAuth v5 + Tailwind v4/shadcn. Archivos de rutina en Supabase Storage. Deploy en Vercel + Supabase.
-- **Rutina del cliente:** el admin/profe **sube un archivo (PDF/imagen)** y el socio lo ve/descarga. Editor estructurado de ejercicios = fase posterior.
-- **Portal cliente en v1:** SÍ. El socio entra con su DNI y tiene su propia pantalla; la descarga de rutina queda para cuando tenga contraseña.
-- **Umbral "próximo a vencer":** 7 días (configurable vía `DIAS_PROXIMO_A_VENCER`).
-- **Alcance de sedes:** un gimnasio con varias **sedes**. Vender a otros gimnasios = fase posterior.
-- **Estado de cuota derivado:** se calcula desde `fecha_vencimiento`, no se guarda.
-- **Método de pago:** incluye `MERCADO_PAGO`.
-- **Asistencias inmutables** y **trazabilidad de caja** (`registrado_por` server-side): reglas duras.
+### Si Kevin ya trajo lo que falta
 
-### Decisiones de la sesión del 19/08/2026
-- **DB de desarrollo:** PostgreSQL 18 local, rol `totalfit`, base `totalfit_dev`. Supabase queda para el deploy.
-- **`tipo_pase`:** enum `MEDIO | LIBRE` + mapa `tipo_pase → días` en `src/lib/pases.ts` (30 días ambos, provisorio).
-- **`/recepcion` requiere sesión ADMIN.** La PC de la puerta queda logueada.
-- **Amarillo = puede pasar.** Solo el rojo deniega el acceso.
-- **La asistencia se registra solo si el acceso está permitido** — la bitácora es de ingresos, no de consultas.
-- **Zona horaria fija** `America/Argentina/Buenos_Aires`: un pase que vence hoy es ACTIVO todo el día.
-- **Socio con cuenta INACTIVA → rojo**, aunque le quede cuota paga. ⚠️ No está en `CLAUDE.md`: confirmar.
-- **El vencimiento que manda es el más lejano**, no el del último pago cargado.
-- **Página pública:** los datos del gimnasio viven en `src/lib/gimnasio.ts`. Las fotos se ponen copiando archivos a `public/fotos/` (`portada.jpg`, `sala.jpg` y `frente.jpg`), sin tocar código.
-- **Cloudinary: NO.** Para las fotos de la landing alcanza con `public/`, y para las rutinas ya está Supabase Storage. Sumar un tercer servicio no aporta nada.
+Está todo planificado. El orden que destraba más rápido:
 
-## Decisiones ABIERTAS
-- [ ] **¿Se prende la ventana de pago?** Ya está implementada pero **apagada** (`DIAS_DE_GRACIA=0`). Confirmar con el gimnasio cuántos días de tolerancia quieren y poner ese número. Ver sección propia más abajo.
-- [ ] **Repo en GitHub.** Hoy el repo es solo local. Falta `gh auth login` (es interactivo, lo tiene que correr Kevin) o crear el repo a mano y pasar la URL. Después: `main` protegida + el socio como colaborador.
-- [ ] **¿Hace falta un rol DUEÑO separado de EMPLEADO?** Hoy cualquier ADMIN puede dar de alta y de baja a otros. Para un gimnasio chico suele alcanzar, pero significa que un profe podría crear cuentas o desactivar a otro. Si Kevin quiere que solo el dueño toque `/personal`, hay que agregar un tercer rol al enum y una migración. Los candados anti-lockout ya están puestos igual.
-- [ ] **Borrar los datos de prueba** (`10000001` a `10000004`, `20000002`) antes de usar el sistema en serio, y cambiar el DNI del admin por el real.
-- [ ] **DNI en la migración.** La planilla no tiene DNI. Se resuelve al escribir el script de import.
-- [ ] **Días de vencimiento por tipo de pase.** Hoy ambos en 30. Confirmar con el gimnasio.
-- [ ] **Datos reales del gimnasio.** `src/lib/gimnasio.ts` tiene marcados con `REVISAR` la dirección, el teléfono, el WhatsApp, el Instagram y el mail — hoy son provisorios. **Hay que cambiarlos antes de mostrarle esto a alguien.**
-- [ ] **Fotos del gimnasio.** Copiar tres archivos a `public/fotos/`: `portada.jpg`, `sala.jpg` y `frente.jpg`. Aparecen solas, sin tocar código. Mientras tanto se ve un bloque diseñado, no una imagen rota.
-- [ ] **Precios de los planes** para mostrar en la landing (hoy dice "consultanos por WhatsApp o en recepción").
-- [ ] **Qué era "no entregado".** Kevin mencionó ese estado; se interpretó como el socio que nunca pagó ("Sin pagos"). Si se refería a la **rutina no entregada**, es una columna aparte.
-- [ ] **Si el socio exige MongoDB.** _Nota: Prisma 7 ya no tiene conector MongoDB._
-
-## Ventana de pago mensual — ✅ implementada, apagada por defecto
-
-Idea de Kevin: el socio paga el 1° y tiene **del 1 al 5 del mes siguiente** para pagar la cuota siguiente. El dueño ve con anticipación quién entra en período de pago, y después quién ya se pasó.
-
-Está implementada en `src/lib/cuota.ts` como un **cuarto estado** entre amarillo y rojo:
-
-| Estado | Cuándo | ¿Entra? | Qué ve el dueño | Qué ve el socio |
-|---|---|---|---|---|
-| ACTIVO (verde) | Falta más que el umbral | Sí | — | "Cuota al día" |
-| PRÓXIMO A VENCER (amarillo) | Faltan ≤ 5 días | Sí | "Fernando entra en período de pago en 5 días" | "En 5 días te toca renovar" |
-| **EN PERÍODO DE PAGO (naranja)** | Venció, pero dentro de los días de gracia | Sí | "Fernando tiene que pagar" | "Se te venció la cuota, tenés hasta el 5" |
-| VENCIDO (rojo) | Se pasó la gracia | No | "Fernando está moroso" | "Cuota vencida" |
-
-**Cómo se prende:** poner `DIAS_DE_GRACIA=5` (o los días que decida el gimnasio) en `.env.local`. Con `0` — que es el default — el sistema se comporta exactamente como la Regla de Oro 2 original: vencido es rojo y punto. Hay un test que fija ese comportamiento para que nadie lo cambie sin darse cuenta.
-
-Quedó documentado en la **Regla de Oro 2 de `CLAUDE.md`**, no solo en el código: prender la ventana significa que el gimnasio regala esos días de acceso, y eso es una decisión de negocio, no un detalle técnico.
-
-También se agregaron `mensajeParaAdmin()` y `mensajeParaSocio()` en `src/lib/cuota.ts`: la misma información con dos tonos. Al dueño "Fernando tiene que pagar: le quedan 4 días", al socio "se te venció la cuota, pero tenés 4 días para renovarla y seguir entrenando". Las va a reusar el dashboard y el portal.
-
-**Falta todavía:** lo de "pagás siempre del 1 al 5" en sentido estricto — anclar el vencimiento a un día fijo del mes por socio (`dia_de_cobro`) en vez de `fecha_pago + 30 días`. La gracia sola ya cubre casi todo el caso; esto se puede hacer después.
-
-**Avisos automáticos por WhatsApp o mail siguen fuera del MVP.** Lo que sí entra es que el dueño vea la lista en el dashboard y el socio vea el mensaje al entrar a su portal.
+1. **Supabase primero** — habilita rutinas *y* deploy de una.
+2. **Rutinas** (bloque D): bucket privado, subida desde la ficha del socio, descarga con signed URL de corta duración. Las claves de socio ya están hechas, que era el requisito.
+3. **Import** (bloque E): migración con `dni_provisorio`, script con modo `--simular`, filtro "DNI pendiente" en la planilla. Los detalles de las trampas de la planilla están en `CLAUDE.md` §7.
+4. **Deploy** (bloque F): migrar a Supabase, conectar Vercel, `AUTH_SECRET` **nuevo** para producción, borrar los datos de prueba.
 
 ---
 
-## Fase 1 — pasos
+## Qué está hecho
 
-- [x] **1.** Confirmar entendimiento del modelo, reglas de oro y stack.
-- [x] **2. Scaffolding.** Next.js 16, shadcn/ui, Prisma 7 + `@prisma/adapter-pg`, NextAuth v5, zod, bcryptjs, date-fns, vitest. `git init`, `.env.example`, `prisma.config.ts`.
-- [x] **3a. Schema de Prisma** + SQL de la migración inicial + singleton `src/lib/prisma.ts`.
-- [ ] **3b. Aplicar la migración** contra `totalfit_dev`. ⛔ Bloqueado por la base.
-- [x] **4. `src/lib/cuota.ts`** — cálculo único de estado de cuota + `src/lib/pases.ts` + 8 tests.
-- [x] **5. Auth de admin** con NextAuth credenciales, `proxy.ts` y seed del primer admin.
-- [x] **6. Pantalla de recepción** — DNI → verde/amarillo/rojo + asistencia inmutable + 8 tests con Prisma mockeado.
-- [x] **6b. Página pública** del gimnasio (extra, pedida por Kevin).
-- [ ] **7. Verificación end-to-end.** ⛔ Bloqueado por la base.
+| Superficie | Estado |
+|---|---|
+| Landing pública (`/`) | ✅ Completa. Faltan fotos y datos reales. |
+| Ingreso unificado (`/ingresar`) | ✅ Socio con DNI · personal con DNI + contraseña. |
+| Portal del socio (`/mi-cuenta`) | ✅ Cuota, plan, pagos, ingresos. Rutina pendiente. |
+| Claves de socio | ✅ Se la crea el socio verificando su teléfono. |
+| Recepción / la puerta | ✅ Verde, amarillo, naranja y rojo + asistencia inmutable. |
+| Dashboard del dueño | ✅ Contadores derivados, caja del mes, morosos. |
+| Socios — vista planilla | ✅ Filtros, historial desplegable, cobrar en un click. |
+| Alta, ficha y edición de socio | ✅ Incluye corregir el DNI. |
+| Registro de pagos | ✅ Con `registrado_por` del servidor. |
+| Bitácora de ingresos (`/asistencias`) | ✅ Solo lectura, con filtros. |
+| Personal (`/personal`) | ✅ Alta de profes, reset de clave, baja. |
+| Modo claro / oscuro | ✅ Botón en las 4 superficies. |
+| Responsive | ✅ Tarjetas en celular, tablas en escritorio. |
+| **Rutinas** | ❌ Necesita Supabase. |
+| **Import de la planilla** | ❌ Necesita el CSV. |
+| **Deploy** | ❌ Necesita Supabase. |
 
-## Fase 2 — el resto del MVP
-1. [x] **Dashboard del dueño:** contadores derivados, cobros del mes, morosos, quién entra en período de pago.
-2. [x] **CRUD de socios:** listado con búsqueda, alta, ficha y baja lógica.
-3. [x] **Registro de pagos** con `fecha_vencimiento` autocalculada y `registrado_por` automático.
-4. [x] **Portal del cliente** (`/mi-cuenta`): consulta de cuota por DNI.
-5. [x] **Gestión del personal:** alta de profes/empleados con contraseña, reset de contraseña y baja, con candados anti-lockout.
-6. [ ] **Claves para socios**, requisito para poder darles acceso a la rutina.
-6. [ ] **Carga y descarga de rutinas** a Supabase Storage.
-7. [ ] **Listado de asistencias** (solo lectura).
-8. [ ] **Script de importación** de la planilla, con limpieza de datos.
-9. [ ] **Editar datos** de un socio ya cargado (hoy solo se puede crear y dar de baja).
-10. [ ] **Repo en GitHub** con `main` protegida + el socio como colaborador.
-11. [ ] **Deploy** en Vercel + Supabase.
+### Las 4 Reglas de Oro, verificadas contra la base real
 
-## Deuda técnica anotada
-- `npm audit`: 3 vulnerabilidades **high** en `deepmerge-ts`, que entra por `@prisma/config` → `prisma` (CLI). Es cadena de **devDependency**, no llega al runtime. El fix automático baja a Prisma 6 (breaking). Se revisa cuando Prisma publique el bump.
-- La landing tiene los datos del gimnasio hardcodeados. Si el dueño los quiere editar solo, hay que sacarlos a la base.
+| Regla | Cómo se verificó | Resultado |
+|---|---|---|
+| 1 · DNI único | `INSERT` con un DNI repetido | rechazado por `Usuario_dni_key` ✅ |
+| 2 · Puerta | Los 4 DNI demo + uno inexistente | verde / amarillo / rojo / rojo / rojo ✅ |
+| 3 · Asistencias inmutables | Conteo tras las consultas | solo los 2 que pasaron tienen fila ✅ |
+| 4 · Trazabilidad | `JOIN` de pagos con su admin | los 3 pagos con dueño, ninguno anónimo ✅ |
+
+También verificado: un socio no puede entrar al panel, una contraseña incorrecta no crea sesión, y una cookie de socio con el nivel editado a mano se rechaza.
+
+---
+
+## Rutas del sistema
+
+| Ruta | Qué es |
+|---|---|
+| `/` | Landing: gimnasio, actividades, planes, horarios, ubicación |
+| `/ingresar` | **Puerta única.** Socio con DNI · personal con DNI + contraseña |
+| `/mi-cuenta` | Pantalla del socio: cuota, plan, pagos, ingresos, rutina |
+| `/dashboard` | Panel del dueño: contadores, caja del mes, morosos |
+| `/socios` | Vista planilla: filtros, estado al costado, cobrar en un click |
+| `/socios/nuevo` | Alta de socio, con primer pago opcional |
+| `/socios/[id]` | Ficha: pagos, ingresos, cobrar, clave, dar de baja |
+| `/socios/[id]/editar` | Corregir datos, incluido el DNI |
+| `/asistencias` | Bitácora de ingresos, solo lectura |
+| `/personal` | Alta de profes/empleados, reset de contraseña, baja |
+| `/recepcion` | La puerta. Se abre desde el dashboard |
+
+Comandos: `npm run dev` · `npm test` (50) · `npm run lint` · `npm run build` · `npm run db:studio` · `npm run db:seed`
+
+---
+
+## Decisiones tomadas
+
+### De negocio
+- **Umbral "próximo a vencer":** 7 días (`DIAS_PROXIMO_A_VENCER`).
+- **Ventana de pago:** implementada como cuarto estado naranja, **apagada por defecto** (`DIAS_DE_GRACIA=0`). Ver sección propia abajo.
+- **Amarillo y naranja dejan pasar.** Solo el rojo deniega.
+- **Socio con cuenta INACTIVA → rojo**, aunque le quede cuota paga.
+- **El vencimiento que manda es el más lejano**, no el del último pago cargado.
+- **La asistencia se registra solo si el acceso está permitido** — la bitácora es de ingresos, no de consultas.
+- **Sin pagos parciales:** en el gimnasio se paga todo o no se paga.
+- **ADMIN incluye al dueño y a los profes.** Cualquier ADMIN puede dar de alta a otro.
+
+### Técnicas
+- **Stack:** Next.js 16 + PostgreSQL/Prisma 7 + NextAuth v5 + Tailwind v4/shadcn.
+- **DB de desarrollo:** PostgreSQL 18 local, rol `totalfit`, base `totalfit_dev`. Supabase para el deploy.
+- **`tipo_pase`:** enum `MEDIO | LIBRE` + mapa a días en `src/lib/pases.ts` (30 y 30, provisorio).
+- **Zona horaria fija** `America/Argentina/Buenos_Aires`: un pase que vence hoy es ACTIVO todo el día.
+- **Estado de cuota derivado**, nunca guardado.
+- **Sesión del socio con dos niveles** (`BASICO` / `COMPLETO`), en cookie propia firmada con HMAC y no en NextAuth — ver el desvío explicado en la bitácora del 19/08.
+- **Datos del gimnasio en `src/lib/gimnasio.ts`**, no en la base.
+- **Cloudinary: NO.** `public/` alcanza para la landing y Supabase Storage para las rutinas.
+
+---
+
+## Decisiones ABIERTAS
+
+- [ ] **¿Se prende la ventana de pago?** Confirmar con el gimnasio cuántos días de tolerancia y poner ese número en `DIAS_DE_GRACIA`.
+- [ ] **Días de vencimiento por tipo de pase.** Hoy ambos en 30. Confirmar.
+- [ ] **Precios de los planes** para la landing (hoy dice "consultanos").
+- [ ] **¿Hace falta un rol DUEÑO separado de EMPLEADO?** Hoy cualquier ADMIN puede dar de alta y de baja a otros. Para un gimnasio chico suele alcanzar. Si se quiere restringir, es un tercer rol en el enum + migración. Los candados anti-lockout ya están.
+- [ ] **Qué era "no entregado".** Kevin mencionó ese estado; se interpretó como el socio que nunca pagó ("Sin pagos"). Si se refería a la **rutina no entregada**, es una columna aparte.
+- [ ] **Anclar el vencimiento a un día fijo del mes** (`dia_de_cobro` por socio) en vez de `fecha_pago + 30`. La ventana de pago ya cubre casi todo el caso.
+
+## Antes de abrirlo al público
+
+- [ ] Borrar los usuarios de prueba: `10000001` a `10000004` y `20000002`.
+- [ ] Cambiar el DNI del admin `20000001` por el real de Kevin.
+- [ ] `AUTH_SECRET` **distinto** en producción. El de desarrollo no se reusa nunca.
+- [ ] Completar `src/lib/gimnasio.ts` (todo lo marcado `REVISAR`).
+- [ ] Copiar las 3 fotos a `public/fotos/`.
+- [ ] Proteger `main` en GitHub (Settings → Branches) y sumar al socio como colaborador.
+
+---
+
+## Ventana de pago mensual — implementada, apagada
+
+El socio paga el 1° y tiene del 1 al 5 del mes siguiente para renovar sin quedarse afuera. Es un **cuarto estado** entre amarillo y rojo:
+
+| Estado | Cuándo | ¿Entra? | Dueño ve | Socio ve |
+|---|---|---|---|---|
+| ACTIVO (verde) | Falta más que el umbral | Sí | — | "Cuota al día" |
+| PRÓXIMO A VENCER (amarillo) | Faltan ≤ 7 días | Sí | "Entra en período de pago en N días" | "Te quedan N días" |
+| **EN PERÍODO DE PAGO (naranja)** | Venció, dentro de la gracia | Sí | "Tiene que pagar: le quedan N días" | "Se te venció, tenés N días" |
+| VENCIDO (rojo) | Se pasó la gracia | No | "Está moroso hace N días" | "Tu cuota está vencida" |
+
+**Cómo se prende:** `DIAS_DE_GRACIA=5` en `.env.local`. Con `0` —el default— el sistema se comporta como la Regla de Oro 2 original: vencido es rojo y punto. Hay un test que fija ese comportamiento.
+
+Está documentado en la **Regla de Oro 2 de `CLAUDE.md`**, no solo en el código: prenderlo significa que el gimnasio regala esos días de acceso, y eso es una decisión de negocio.
+
+`mensajeParaAdmin()` y `mensajeParaSocio()` en `src/lib/cuota.ts` dan la misma información con dos tonos, y los reusan el dashboard y el portal.
+
+**Los avisos automáticos por WhatsApp o mail siguen fuera del MVP.** Lo que sí entra es que el dueño vea la lista en el dashboard y el socio el mensaje en su portal.
+
+---
+
+## Base de datos local
+
+PostgreSQL 18 local (servicio `postgresql-x64-18`), base `totalfit_dev`, rol dedicado `totalfit`. Migración aplicada y seed ejecutado.
+
+**Cómo se llegó ahí**, por si hay que repetirlo en otra máquina: Docker no estaba instalado y la password del superusuario `postgres` es desconocida (se probaron varias, ninguna anduvo; no hay `pgpass.conf` ni `PGPASSWORD`). Como recargar la config de Postgres necesita permisos de Administrador, Kevin corrió un script elevado que hizo backup de `pg_hba.conf`, lo puso en `trust` unos segundos, creó rol y base, y lo restauró en un bloque `finally`.
+
+Se creó un **rol dedicado** en vez de cambiar la password del superusuario: así nada más que use ese Postgres se rompe, y la app corre con permisos mínimos.
+
+### Usuarios de prueba cargados
+
+| DNI | Quién | Para qué |
+|---|---|---|
+| `20000001` | Kevin Admin | El usuario del panel |
+| `20000002` | Fernando Profe | Personal de prueba |
+| `10000001` | Ana Gómez | Al día → verde |
+| `10000002` | Bruno Álvarez | Vence en 3 días → amarillo |
+| `10000003` | Carla Ibáñez | Venció hace 10 días → rojo |
+| `10000004` | Diego Sosa | Nunca pagó → rojo. **Sin teléfono a propósito**, para probar que no pueda crear clave |
+
+Las contraseñas están en `.env.local`, que está gitignoreado.
+
+> **Regla del repo:** ninguna contraseña se escribe en un archivo versionado, ni siquiera de una cuenta de prueba.
+
+---
+
+## Deuda técnica
+
+- `npm audit`: 3 vulnerabilidades **high** en `deepmerge-ts`, que entra por `@prisma/config` → `prisma` (CLI). Cadena de **devDependency**, no llega al runtime. El fix automático baja a Prisma 6 (breaking). Revisar cuando Prisma publique el bump.
+- Los datos del gimnasio están en un archivo, no en la base. Si el dueño los quiere editar solo, hay que sacarlos a una tabla.
+- Queda una rama local `respaldo-antes-de-limpiar` (nunca se sube) de la limpieza del historial. Se puede borrar: `git branch -D respaldo-antes-de-limpiar`.
+
+---
 
 ## Bitácora
-- **19/08/2026** — **Editar socio y bitácora de ingresos.** Hasta ahora un socio se podía crear y dar de baja, pero no corregir: un nombre mal tipeado quedaba así para siempre. `/socios/[id]/editar` permite arreglar nombre, apellido, teléfono, email, sede y **el DNI**. Eso último no es un capricho: la importación de la planilla mete a los 349 socios con un DNI provisorio, y el momento de corregirlo es cuando la persona aparece por la puerta — sin esta pantalla el import no se puede cerrar. El DNI sigue siendo único, así que se chequea contra el resto antes de guardar y se avisa quién lo tiene. La clave y el estado se editan aparte, para que un error tipeando el teléfono no pueda dejar a alguien afuera. Además `/asistencias`: la bitácora de ingresos con filtros por hoy, 7 y 30 días, búsqueda por socio y el conteo de personas distintas. Solo lectura, como manda la Regla de Oro 3 — en `src/lib/asistencias.ts` no hay ni va a haber una función que modifique. 5 tests nuevos (50 en total).
-- **19/08/2026** — **Claves de socio (bloque C del plan).** El socio se crea su propia clave desde su pantalla, verificando los **últimos 4 dígitos del teléfono** que ya tenemos cargado: es el segundo dato que un desconocido con solo el DNI no tiene. Con 349 socios, ponerles la clave de a uno era inviable. La sesión pasa a tener **dos niveles**: `BASICO` (DNI solo) ve cuota, plan, pagos e ingresos, y `COMPLETO` (con clave) va a ser el único que descargue la rutina. El nivel viaja dentro de lo firmado con HMAC — verificado que una cookie con el nivel cambiado a mano se rechaza. Si el socio no tiene teléfono cargado no se le deja crear clave: sin segundo dato, cualquiera que sepa el DNI se quedaría con la cuenta ajena. Queda el reinicio de clave desde la ficha, para el que cambió de número. 13 tests nuevos (45 en total).
-  - **Desvío del plan, a propósito:** el plan decía reemplazar `sesion-socio.ts` por NextAuth. Se mantuvo la cookie propia porque el modelo de dos niveles se expresa mejor ahí y la propiedad de seguridad es la misma (HMAC, `httpOnly`, vencimiento). Meter a los socios en NextAuth agregaba un provider y el riesgo de que una sesión de socio pase por algún chequeo pensado para admins, a cambio de nada.
-- **19/08/2026** — **Modo claro/oscuro y responsive completo (bloques A y B del plan).** `next-themes` estaba instalado pero sin conectar: el panel era siempre claro y la parte pública siempre oscura. Ahora hay `ProveedorTema` en el layout raíz y un `BotonTema` en las cuatro superficies, arrancando con el tema del dispositivo y guardando la elección. El botón dibuja los dos íconos y deja que CSS muestre el que corresponde, en vez de usar estado de "ya monté": así sale igual del servidor y del cliente, sin parpadeo ni desajuste de hidratación. Las páginas públicas dejan de tener `bg-neutral-950` hardcodeado y pasan a tokens (`bg-background`, `text-muted-foreground`, `border-border`), y el verde de la marca usa `emerald-600` en claro porque el 400 no contrasta sobre blanco. Además: el historial desplegado ya no tapa el tinte de la fila, y las dos tablas que faltaban — personal y los pagos de la ficha — tienen tarjetas apiladas en celular.
-- **19/08/2026** — **Cobro desde la planilla y pantalla propia del socio.** El botón de cobrar ahora sirve también para el socio que nunca pagó: si no hay pago anterior del cual copiar, abre un formulario corto ahí mismo (monto, plan, método) en vez de mandar a la ficha. El alta de socio suma un bloque opcional de primer pago, porque lo normal es que el socio pague el mismo día que se anota. Sin pagos parciales: en el gimnasio se paga todo o no se paga. **`/mi-cuenta` pasa a ser una pantalla completa** — antes era un cuadrito dentro del formulario de ingreso — con la cuota, el plan, el historial de pagos, los ingresos al gimnasio y el lugar ya reservado para la rutina. El socio se identifica con una **cookie firmada con HMAC** (`src/lib/sesion-socio.ts`) y no con el DNI en la URL, que se comparte y queda en el historial. Verificado con tres cookies: la válida entra, una con el id cambiado se rechaza y una vencida también.
-- **19/08/2026** — **Tres correcciones sobre el panel.** (1) **Bug de ingreso, corregido:** el campo de contraseña se ocultaba con CSS pero seguía en el DOM, así que se enviaba igual; bastaba que el navegador lo autocompletara para que un socio terminara pidiendo un login de admin y recibiera "DNI o contraseña incorrectos" sin entender por qué. Ahora el campo no se renderiza cuando el perfil es socio. (2) **Historial de pagos desplegable** desde la planilla, en la tabla y en las tarjetas del celular. Se carga a pedido con una server action: con 349 socios y un pago por mes, traerlo junto al listado serían miles de filas viajando para mostrar, casi siempre, ninguna. (3) **Recepción sale del menú del panel** y pasa a abrirse con un botón desde el dashboard. No se borró: es la pantalla de la PC de la puerta, la única que registra asistencias (Regla 3) y la que decide el acceso (Regla 2). Lo que sobraba era tenerla como sección de administración, donde el mismo dato se consulta mejor en `/socios`.
-- **19/08/2026** — **Repo publicado y limpio.** El proyecto está en `github.com/kevindlf/TotalFitGym`, rama `main`. Antes del primer push se escaneó el historial buscando secretos: apareció la contraseña de una cuenta de prueba escrita en este mismo archivo, en tres commits. Se reescribió el historial con `git filter-branch` para sacarla y se rotó igual esa contraseña en la base, porque una credencial expuesta se rota aunque se borre el rastro. Verificado que ya no aparece en ningún commit ni en el remoto, que los 18 commits siguen enteros y que el código quedó idéntico. Queda una rama local `respaldo-antes-de-limpiar` (nunca se sube) por si hiciera falta volver. Agregado un README con el arranque, las Reglas de Oro y el flujo de ramas.
-- **19/08/2026** — **Landing profesional, mobile-first y puerta única.** La página pública pasa de cuatro secciones sueltas a una landing completa: hero, qué vas a encontrar, planes con lo que incluye cada uno, horarios, ubicación con teléfono/Instagram/mail, y cierre. Barra superior fija con el botón de ingresar siempre a un toque. Todos los datos salen ahora de `src/lib/gimnasio.ts`, con los provisorios marcados `REVISAR`. `/ingresar` gana un selector "Soy socio / Trabajo acá" para que el formulario sea una sola pregunta por vez. **Mobile-first como convención del proyecto** (`CLAUDE.md` §9): la vista planilla de socios se convierte en tarjetas apiladas en el celular y queda como tabla solo de `md:` para arriba — ocho columnas en un teléfono obligaban a scrollear de costado para leer un solo socio. Nota de versión: lucide v1 sacó los íconos de marcas, así que Instagram se dibuja con `AtSign`.
-- **19/08/2026** — **Planilla editable y unificación del ingreso.** `/socios` pasa a ser la planilla que el gimnasio ya sabe leer, con filtros rápidos, la fila pintada según el estado, el vocabulario viejo (Pagado / Por vencer / Falta pagar / Sin pagos) y el botón "Pagó" que repite el último pago en un click. `repetirUltimoPago` recibe `(estadoPrevio, formData)` y no un closure, para recuperar el progressive enhancement. Se unifican `/login` y `/mi-cuenta` en `/ingresar`, con redirects para no romper links.
-- **19/08/2026** — **Base andando y todo verificado.** Kevin corrió el script como Administrador; se creó el rol `totalfit` y la base `totalfit_dev`. Aplicada la migración inicial y ejecutado el seed. Verificado end-to-end contra datos reales: login del admin devuelve sesión con rol ADMIN; los 4 DNI demo dan verde/amarillo/rojo/rojo y un DNI inexistente da rojo; solo los dos que pasaron tienen fila en `Asistencia`; los tres pagos tienen admin asociado; un `INSERT` con DNI repetido es rechazado por `Usuario_dni_key`; un socio no puede loguearse al panel y una contraseña incorrecta no crea sesión.
-- **19/08/2026** — **Gestión del personal.** `/personal`: alta de profes y empleados con contraseña obligatoria (bcrypt 12 rondas), reset de contraseña y baja/reactivación. Dos candados contra quedarse afuera del sistema: nadie se da de baja a sí mismo y no se puede desactivar al último admin activo. El DNI es único para todo el sistema, así que si el profe ya está cargado como socio el alta lo dice en vez de duplicar la ficha. Probado creando a "Fernando Profe" y verificando que puede loguearse.
-- **19/08/2026** — **Panel del dueño y portal del cliente.** `/dashboard` con contadores derivados (se clasifica cada socio con `calcularEstadoCuota`, no se lee ningún campo guardado), cobrado del mes, ingresos del día y dos listas accionables: quién entra en período de pago y quién tiene que pagar. `/socios` con búsqueda por GET, alta con validación de DNI duplicado antes de que explote el índice unique, ficha con historial de pagos (incluye quién cobró cada uno), últimos ingresos, registro de pago y baja lógica. Todas las acciones pasan por `exigirAdmin()`, que saca el admin de la sesión del servidor; el formulario de pago no manda ni el admin ni el vencimiento — el vencimiento lo calcula el servidor con `calcularFechaVencimiento`. `/mi-cuenta` deja de ser 404: el socio consulta por DNI y ve el mensaje en tono amable, sin registrar asistencia y exponiendo solo nombre de pila, estado y vencimiento.
-- **19/08/2026** — **Ventana de pago.** Cuarto estado `EN_PERIODO_DE_PAGO` (naranja) en `src/lib/cuota.ts`, controlado por `DIAS_DE_GRACIA` y apagado por defecto. Mensajes separados para dueño y socio. Recepción muestra el panel naranja con los días que le quedan para renovar. Regla de Oro 2 de `CLAUDE.md` actualizada. 26 tests.
-- **19/08/2026** — **Página pública.** Landing del gimnasio en `/`, reemplazando la default de Next: hero, planes (lee las etiquetas de `src/lib/pases.ts`, no las duplica), horarios y footer con acceso del personal. Componente `Foto` que detecta si el archivo existe y muestra un marcador con el nombre que falta, así poner fotos no requiere tocar código. Descubierto que este shadcn está sobre **Base UI y no Radix**: no hay `asChild`, va `render={<Link/>}` (anotado en `CLAUDE.md` §10).
-- **19/08/2026** — **Pasos 5 y 6.** Auth de admin con NextAuth v5 (DNI + password, solo rol ADMIN activo), config partida en `auth.config.ts` (edge-safe, la usa `proxy.ts`) y `auth.ts` (Prisma + bcrypt). Mensaje de error único y comparación contra un hash descartable cuando el DNI no existe, para no filtrar por tiempo de respuesta qué socios están registrados. Seed idempotente del primer admin desde variables de entorno. Pantalla de recepción con `src/lib/recepcion.ts` como lógica de puerta (reusa `calcularEstadoCuota`, no la duplica), API `POST /api/recepcion` que verifica sesión ADMIN server-side, y panel verde/amarillo/rojo con ícono y texto además del color. 8 tests con Prisma mockeado verifican que ningún rechazo escriba en la bitácora.
-- **19/08/2026** — **Pasos 3 y 4.** Schema de Prisma con las 5 entidades, `dni` unique, enums (incluye `MERCADO_PAGO`) e índices sobre las dos consultas calientes. Las FK de `Asistencia` en RESTRICT (no CASCADE) para que borrar un socio no arrastre su bitácora. SQL de la migración generado sin conexión. `src/lib/cuota.ts` con la única implementación del estado de cuota, comparando por día calendario en zona argentina.
-- **19/08/2026** — **Paso 2 (scaffolding).** Proyecto Next.js 16 creado con TypeScript, Tailwind v4, App Router y `src/`. Instaladas todas las dependencias. `git init` + `.env.example`. Corregidos los pasos que todavía decían MongoDB/Mongoose.
-- **18/08/2026** — Creados `CLAUDE.md` y `PROGRESO.md` a partir del modelo de datos conceptual/lógico de Total Fit y de la planilla real de socios.
+
+- **19/08/2026** — **Guía de entrada para el compañero.** `BIENVENIDO.md` junta en un lugar el arranque, las pantallas que existen, qué falta, dónde tocar los estilos, qué no romper y el flujo con git. El README apunta ahí desde la primera línea. Publicado también como página web para pasarle el link sin que clone.
+- **19/08/2026** — **Editar socio y bitácora de ingresos.** `/socios/[id]/editar` permite corregir nombre, apellido, teléfono, email, sede y **el DNI**. Eso último destraba el import: los 349 socios entran con DNI provisorio y se corrige cuando la persona aparece por la puerta. El DNI sigue siendo único, se chequea antes de guardar. La clave y el estado se editan aparte, para que un error tipeando no deje a nadie afuera. Además `/asistencias`: filtros por hoy, 7 y 30 días, búsqueda y conteo de personas distintas. Solo lectura (Regla 3): en `src/lib/asistencias.ts` no hay ninguna función que modifique.
+- **19/08/2026** — **Claves de socio.** El socio se crea su clave verificando los **últimos 4 dígitos del teléfono** que ya tenemos: es el segundo dato que un desconocido con solo el DNI no tiene. Con 349 socios, ponerlas de a una era inviable. La sesión pasa a tener dos niveles: `BASICO` (DNI solo) ve cuota, plan, pagos e ingresos; `COMPLETO` (con clave) va a ser el único que descargue la rutina. El nivel viaja dentro de lo firmado con HMAC — verificado que una cookie con el nivel cambiado a mano se rechaza. Sin teléfono cargado no se deja crear clave.
+  - **Desvío deliberado del plan:** decía reemplazar `sesion-socio.ts` por NextAuth. Se mantuvo la cookie propia porque el modelo de dos niveles se expresa mejor ahí y la propiedad de seguridad es la misma. Meter a los socios en NextAuth sumaba un provider y el riesgo de que una sesión de socio pase por algún chequeo pensado para admins, a cambio de nada.
+- **19/08/2026** — **Modo claro/oscuro y responsive completo.** `next-themes` estaba instalado pero sin conectar: el panel era siempre claro y la parte pública siempre oscura. Ahora hay `ProveedorTema` en el layout raíz y `BotonTema` en las cuatro superficies. El botón dibuja los dos íconos y deja que CSS muestre el que va, en vez de usar estado de "ya monté": sale igual del servidor y del cliente, sin parpadeo. Las páginas públicas dejan de tener `bg-neutral-950` hardcodeado y pasan a tokens. Además: el historial desplegado ya no tapa el tinte de la fila, y las dos tablas que faltaban tienen tarjetas en celular.
+- **19/08/2026** — **Cobro desde la planilla y pantalla propia del socio.** El botón de cobrar sirve también para el socio que nunca pagó: abre un formulario corto en el lugar. El alta suma un primer pago opcional, porque lo normal es que el socio pague el mismo día que se anota. `/mi-cuenta` pasa a ser una pantalla completa con cuota, plan, historial de pagos, ingresos y el lugar reservado para la rutina. El socio se identifica con cookie firmada, no con el DNI en la URL: una URL se comparte, queda en el historial y se filtra por el `Referer`.
+- **19/08/2026** — **Tres correcciones.** (1) **Bug de ingreso:** el campo de contraseña se ocultaba con CSS pero seguía en el DOM y se enviaba igual; bastaba que el navegador lo autocompletara para que un socio recibiera "DNI o contraseña incorrectos" sin entender por qué. Ahora no se renderiza. (2) **Historial desplegable** en la planilla, cargado a pedido. (3) **Recepción sale del menú** y se abre desde el dashboard: es la pantalla de la PC de la puerta, no una tarea de administración.
+- **19/08/2026** — **Repo publicado y limpio.** Antes del primer push se escaneó el historial buscando secretos: apareció la contraseña de una cuenta de prueba en tres commits. Se reescribió el historial con `git filter-branch` y **se rotó igual esa contraseña**, porque una credencial expuesta se rota aunque se borre el rastro.
+- **19/08/2026** — **Landing, mobile-first y puerta única.** La página pública pasa a landing completa con los datos saliendo de `src/lib/gimnasio.ts`. `/ingresar` gana el selector "Soy socio / Trabajo acá". **Mobile-first como convención** (`CLAUDE.md` §9): las tablas grandes se duplican en tarjetas para el celular. Nota: lucide v1 sacó los íconos de marcas, Instagram se dibuja con `AtSign`.
+- **19/08/2026** — **Planilla editable.** `/socios` pasa a ser la planilla que el gimnasio ya sabe leer, con filtros, la fila pintada según el estado, el vocabulario viejo (Pagado / Por vencer / Falta pagar / Sin pagos) y el botón "Pagó" que repite el último pago en un click.
+- **19/08/2026** — **Base andando y todo verificado end-to-end** contra datos reales. Ver la tabla de las Reglas de Oro más arriba.
+- **19/08/2026** — **Gestión del personal.** Alta con contraseña obligatoria (bcrypt 12 rondas), reset y baja. Dos candados anti-lockout: nadie se da de baja a sí mismo y no se puede desactivar al último admin activo.
+- **19/08/2026** — **Panel del dueño y portal del cliente.** Dashboard con contadores derivados, `/socios` con búsqueda y ficha completa. Todas las acciones pasan por `exigirAdmin()`; el formulario de pago no manda ni el admin ni el vencimiento.
+- **19/08/2026** — **Ventana de pago.** Cuarto estado `EN_PERIODO_DE_PAGO`, apagado por defecto.
+- **19/08/2026** — **Página pública** y descubrimiento de que este shadcn está sobre **Base UI y no Radix**: no hay `asChild`, va `render={<Link/>}`.
+- **19/08/2026** — **Auth y recepción.** NextAuth v5 con config partida (`auth.config.ts` edge-safe para `proxy.ts`). Mensaje de error único y comparación contra un hash descartable cuando el DNI no existe, para no filtrar por tiempo de respuesta quién está registrado.
+- **19/08/2026** — **Schema y cálculo de cuota.** Las 5 entidades, `dni` unique, FK de `Asistencia` en RESTRICT para que borrar un socio no arrastre su bitácora. `src/lib/cuota.ts` con la única implementación del estado, comparando por día calendario argentino.
+- **19/08/2026** — **Scaffolding.** Next.js 16, Tailwind v4, App Router, `src/`.
+- **18/08/2026** — Creados `CLAUDE.md` y `PROGRESO.md` a partir del modelo de datos y la planilla real.

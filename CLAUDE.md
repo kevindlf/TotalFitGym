@@ -2,6 +2,10 @@
 
 > Fuente de verdad para Claude Code. Leelo completo antes de escribir código. Las **Reglas de Oro** (sección 4) son obligatorias.
 
+> ## ▶ Al empezar una sesión nueva
+>
+> **Leé `PROGRESO.md` antes de hacer nada.** Arriba de todo tiene una sección **"EMPEZÁ ACÁ"** con el estado real, qué falta, qué lo bloquea y por dónde seguir. Este archivo (`CLAUDE.md`) dice cómo está construido el sistema; `PROGRESO.md` dice en qué punto está y qué se decidió.
+
 ## 1. Qué estamos construyendo
 
 Sistema web de gestión para el gimnasio **Total Fit**. Reemplaza la planilla de Google Sheets que hoy usan para socios, pagos y vencimientos. Tres superficies:
