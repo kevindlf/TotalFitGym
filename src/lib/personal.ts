@@ -19,9 +19,14 @@ export interface MiembroDelPersonal {
   pagosCobrados: number;
 }
 
-export async function listarPersonal(): Promise<MiembroDelPersonal[]> {
+export async function listarPersonal(
+  sedeId: string | null,
+): Promise<MiembroDelPersonal[]> {
   const personal = await prisma.usuario.findMany({
-    where: { rol: "ADMIN" },
+    where: {
+      rol: { in: ["ADMIN", "DUENIO"] },
+      ...(sedeId ? { sede_id: sedeId } : {}),
+    },
     select: {
       id: true,
       dni: true,
@@ -43,9 +48,23 @@ export async function listarPersonal(): Promise<MiembroDelPersonal[]> {
   }));
 }
 
-/** Cuántos admins pueden loguearse hoy. Se usa para no dejar al gimnasio afuera. */
-export function contarAdminsActivos() {
+/**
+ * Cuántos admins de UNA sede pueden loguearse hoy.
+ *
+ * Se cuenta por sede y no en toda la cadena: si fuera global, se podría dar de
+ * baja al último admin de San Martín porque quedan tres en Godoy Cruz, y esa
+ * sucursal se quedaría sin nadie que pueda entrar al panel.
+ *
+ * El dueño no cuenta: puede operar cualquier sede, así que su existencia no
+ * garantiza que esta sucursal tenga quien la atienda día a día.
+ */
+export function contarAdminsActivos(sedeId: string) {
   return prisma.usuario.count({
-    where: { rol: "ADMIN", estado: "ACTIVO", password: { not: null } },
+    where: {
+      rol: "ADMIN",
+      sede_id: sedeId,
+      estado: "ACTIVO",
+      password: { not: null },
+    },
   });
 }

@@ -11,12 +11,8 @@ import { editarSocio, type EstadoFormulario } from "../../acciones";
 
 const ESTADO_INICIAL: EstadoFormulario = {};
 
-const CLASE_SELECT =
-  "h-9 w-full rounded-lg border border-input bg-transparent px-3 text-sm";
-
 export function FormularioEditar({
   socio,
-  sedes,
 }: {
   socio: {
     id: string;
@@ -25,9 +21,7 @@ export function FormularioEditar({
     apellido: string;
     telefono: string | null;
     email: string | null;
-    sede: { id_sede: string };
   };
-  sedes: { id_sede: string; nombre: string }[];
 }) {
   const [estado, accion, guardando] = useActionState(
     editarSocio,
@@ -98,23 +92,6 @@ export function FormularioEditar({
             defaultValue={socio.email ?? ""}
           />
         </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="sede_id">Sede *</Label>
-        <select
-          id="sede_id"
-          name="sede_id"
-          required
-          defaultValue={socio.sede.id_sede}
-          className={CLASE_SELECT}
-        >
-          {sedes.map((sede) => (
-            <option key={sede.id_sede} value={sede.id_sede}>
-              {sede.nombre}
-            </option>
-          ))}
-        </select>
       </div>
 
       {estado.error ? (

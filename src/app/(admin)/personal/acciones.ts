@@ -2,12 +2,11 @@
 
 import { hash } from "bcryptjs";
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { auth } from "@/lib/auth";
 import { contarAdminsActivos } from "@/lib/personal";
 import { prisma } from "@/lib/prisma";
+import { exigirPanel } from "@/lib/sede";
 
 export type EstadoFormulario = { error?: string; ok?: string };
 
@@ -15,16 +14,6 @@ export type EstadoFormulario = { error?: string; ok?: string };
 const RONDAS = 12;
 
 const LARGO_MINIMO = 8;
-
-async function exigirAdmin(): Promise<string> {
-  const sesion = await auth();
-
-  if (sesion?.user?.rol !== "ADMIN") {
-    redirect("/ingresar");
-  }
-
-  return sesion.user.id;
-}
 
 const esquemaAlta = z.object({
   dni: z
@@ -35,7 +24,12 @@ const esquemaAlta = z.object({
   apellido: z.string().trim().min(1, "Falta el apellido."),
   email: z.union([z.literal(""), z.email("El email no es válido.")]).optional(),
   telefono: z.string().trim().max(30).optional(),
-  sede_id: z.string().trim().min(1, "Elegí una sede."),
+  /**
+   * Solo el dueño lo manda: es el único que puede dar de alta personal en una
+   * sucursal que no sea la propia. Para un admin se ignora y se usa el de su
+   * sesión, así no puede meter un profe en el gimnasio de al lado.
+   */
+  sede_id: z.string().trim().optional(),
   password: z
     .string()
     .min(LARGO_MINIMO, `La contraseña necesita al menos ${LARGO_MINIMO} caracteres.`),
@@ -53,7 +47,7 @@ export async function crearMiembroDelPersonal(
   _estadoPrevio: EstadoFormulario,
   formData: FormData,
 ): Promise<EstadoFormulario> {
-  await exigirAdmin();
+  const ctx = await exigirPanel();
 
   const parseado = esquemaAlta.safeParse({
     dni: formData.get("dni"),
@@ -71,19 +65,28 @@ export async function crearMiembroDelPersonal(
 
   const datos = parseado.data;
 
+  // Un admin queda clavado a su sede; el dueño puede elegir a cuál da de alta.
+  const sedeDestino =
+    ctx.esDuenio && datos.sede_id ? datos.sede_id : ctx.sedeId;
+
   // Regla de Oro 1: el DNI es único para todo el sistema, no por rol. Si el
   // profe ya está cargado como socio hay que resolverlo a mano, no duplicarlo.
   const yaExiste = await prisma.usuario.findUnique({
     where: { dni: datos.dni },
-    select: { rol: true, nombre: true, apellido: true },
+    select: {
+      rol: true,
+      nombre: true,
+      apellido: true,
+      sede: { select: { nombre: true } },
+    },
   });
 
   if (yaExiste) {
     return {
       error:
-        yaExiste.rol === "ADMIN"
-          ? `${yaExiste.apellido}, ${yaExiste.nombre} ya está cargado como personal.`
-          : `El DNI ${datos.dni} ya existe como socio (${yaExiste.apellido}, ${yaExiste.nombre}). Una persona no puede tener dos fichas.`,
+        yaExiste.rol === "CLIENTE"
+          ? `El DNI ${datos.dni} ya existe como socio de la sede ${yaExiste.sede.nombre} (${yaExiste.apellido}, ${yaExiste.nombre}). Una persona no puede tener dos fichas.`
+          : `${yaExiste.apellido}, ${yaExiste.nombre} ya está cargado como personal de la sede ${yaExiste.sede.nombre}.`,
     };
   }
 
@@ -94,7 +97,7 @@ export async function crearMiembroDelPersonal(
       apellido: datos.apellido,
       email: datos.email || null,
       telefono: datos.telefono || null,
-      sede_id: datos.sede_id,
+      sede_id: sedeDestino,
       password: await hash(datos.password, RONDAS),
       rol: "ADMIN",
       estado: "ACTIVO",
@@ -120,7 +123,7 @@ export async function cambiarPassword(
   _estadoPrevio: EstadoFormulario,
   formData: FormData,
 ): Promise<EstadoFormulario> {
-  await exigirAdmin();
+  const ctx = await exigirPanel();
 
   const parseado = esquemaPassword.safeParse({
     usuario_id: formData.get("usuario_id"),
@@ -131,13 +134,19 @@ export async function cambiarPassword(
     return { error: parseado.error.issues[0]?.message ?? "Datos inválidos." };
   }
 
+  // Acotado a la sede: un admin de Godoy Cruz no le cambia la contraseña a uno
+  // de San Martín.
   const miembro = await prisma.usuario.findFirst({
-    where: { id: parseado.data.usuario_id, rol: "ADMIN" },
+    where: {
+      id: parseado.data.usuario_id,
+      rol: "ADMIN",
+      sede_id: ctx.sedeId,
+    },
     select: { id: true, nombre: true },
   });
 
   if (!miembro) {
-    return { error: "Esa persona no está en el personal." };
+    return { error: "Esa persona no está en el personal de esta sede." };
   }
 
   await prisma.usuario.update({
@@ -160,20 +169,30 @@ export async function cambiarEstadoDelPersonal(
   usuarioId: string,
   nuevoEstado: "ACTIVO" | "INACTIVO",
 ): Promise<EstadoFormulario> {
-  const adminId = await exigirAdmin();
+  const ctx = await exigirPanel();
+
+  const miembro = await prisma.usuario.findFirst({
+    where: { id: usuarioId, rol: "ADMIN", sede_id: ctx.sedeId },
+    select: { id: true },
+  });
+
+  if (!miembro) {
+    return { error: "Esa persona no está en el personal de esta sede." };
+  }
 
   if (nuevoEstado === "INACTIVO") {
-    if (usuarioId === adminId) {
+    if (usuarioId === ctx.usuarioId) {
       return {
         error:
           "No podés darte de baja a vos mismo. Pedile a otro admin que lo haga.",
       };
     }
 
-    if ((await contarAdminsActivos()) <= 1) {
+    // Se cuenta por sede: si fuera global, se podría dejar a esta sucursal sin
+    // nadie que pueda entrar al panel porque quedan admins en las otras.
+    if ((await contarAdminsActivos(ctx.sedeId)) <= 1) {
       return {
-        error:
-          "Es el único admin activo. Si lo das de baja nadie puede entrar al sistema.",
+        error: `Es el único admin activo de la sede ${ctx.sedeNombre}. Si lo das de baja, nadie puede entrar a administrarla.`,
       };
     }
   }

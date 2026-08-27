@@ -6,28 +6,28 @@ import { z } from "zod";
 
 import { hash } from "bcryptjs";
 
-import { auth } from "@/lib/auth";
 import { formatearFecha } from "@/lib/formato";
 import { calcularFechaVencimiento } from "@/lib/pases";
 import { prisma } from "@/lib/prisma";
-
-export type EstadoFormulario = { error?: string; ok?: string };
+import { borrarRutina, guardarRutina } from "@/lib/rutinas";
+import { exigirPanel } from "@/lib/sede";
 
 /**
- * Toda acción del panel arranca por acá.
- *
- * Regla de Oro 4: el admin sale de la sesión del servidor, nunca de un campo
- * del formulario. Devuelve el id del admin logueado o corta.
+ * `traslado` aparece cuando el DNI que se quiso dar de alta ya existe en otra
+ * sucursal. No es un error: es la persona que se mudó de barrio, y el
+ * formulario le ofrece al profe traerla a su sede.
  */
-async function exigirAdmin(): Promise<string> {
-  const sesion = await auth();
-
-  if (sesion?.user?.rol !== "ADMIN") {
-    redirect("/ingresar");
-  }
-
-  return sesion.user.id;
-}
+export type EstadoFormulario = {
+  error?: string;
+  ok?: string;
+  traslado?: {
+    usuarioId: string;
+    nombre: string;
+    apellido: string;
+    dni: string;
+    sedeNombre: string;
+  };
+};
 
 const esquemaSocio = z.object({
   dni: z
@@ -40,14 +40,17 @@ const esquemaSocio = z.object({
   email: z
     .union([z.literal(""), z.email("El email no es válido.")])
     .optional(),
-  sede_id: z.string().trim().min(1, "Elegí una sede."),
 });
+
+// `sede_id` NO está en el esquema a propósito: no es un dato del formulario.
+// Sale de la sesión (Regla de Oro 5). Si viajara en el form, un profe podría
+// dar de alta un socio en la sucursal de al lado editando el HTML.
 
 export async function crearSocio(
   _estadoPrevio: EstadoFormulario,
   formData: FormData,
 ): Promise<EstadoFormulario> {
-  const adminId = await exigirAdmin();
+  const ctx = await exigirPanel();
 
   const parseado = esquemaSocio.safeParse({
     dni: formData.get("dni"),
@@ -55,7 +58,6 @@ export async function crearSocio(
     apellido: formData.get("apellido"),
     telefono: formData.get("telefono") ?? undefined,
     email: formData.get("email") ?? undefined,
-    sede_id: formData.get("sede_id"),
   });
 
   if (!parseado.success) {
@@ -64,16 +66,47 @@ export async function crearSocio(
 
   const datos = parseado.data;
 
-  // Regla de Oro 1. La base tiene el índice unique igual, pero avisamos con un
-  // mensaje entendible en vez de dejar explotar el error de Postgres.
+  // Regla de Oro 1: el DNI es único en TODA la cadena, no por sede. La base
+  // tiene el índice unique igual, pero acá se distinguen tres situaciones que
+  // para el profe son muy distintas entre sí.
   const yaExiste = await prisma.usuario.findUnique({
     where: { dni: datos.dni },
-    select: { id: true, nombre: true, apellido: true },
+    select: {
+      id: true,
+      nombre: true,
+      apellido: true,
+      rol: true,
+      sede_id: true,
+      sede: { select: { nombre: true } },
+    },
   });
 
-  if (yaExiste) {
+  if (yaExiste && yaExiste.rol !== "CLIENTE") {
+    return {
+      error: `El DNI ${datos.dni} pertenece a una cuenta del personal.`,
+    };
+  }
+
+  if (yaExiste && yaExiste.sede_id === ctx.sedeId) {
     return {
       error: `Ya hay una ficha con el DNI ${datos.dni}: ${yaExiste.apellido}, ${yaExiste.nombre}.`,
+    };
+  }
+
+  if (yaExiste) {
+    // Está en otra sucursal. Se devuelve el nombre a propósito: el profe tiene
+    // a la persona parada enfrente y necesita confirmar que es la misma antes
+    // de traerla. Sí, eso significa que un empleado que tipea un DNI al azar
+    // aprende un nombre y una sede — es información que el personal ya maneja
+    // en el mostrador, y sin ella el traslado no se puede confirmar.
+    return {
+      traslado: {
+        usuarioId: yaExiste.id,
+        nombre: yaExiste.nombre,
+        apellido: yaExiste.apellido,
+        dni: datos.dni,
+        sedeNombre: yaExiste.sede.nombre,
+      },
     };
   }
 
@@ -84,7 +117,7 @@ export async function crearSocio(
       apellido: datos.apellido,
       telefono: datos.telefono || null,
       email: datos.email || null,
-      sede_id: datos.sede_id,
+      sede_id: ctx.sedeId,
       rol: "CLIENTE",
       estado: "ACTIVO",
     },
@@ -120,7 +153,8 @@ export async function crearSocio(
           ),
           tipo_pase: pago.data.tipo_pase,
           metodo_pago: pago.data.metodo_pago,
-          registrado_por: adminId,
+          registrado_por: ctx.usuarioId,
+          sede_id: ctx.sedeId,
         },
       });
     }
@@ -148,7 +182,7 @@ export async function registrarPago(
   _estadoPrevio: EstadoFormulario,
   formData: FormData,
 ): Promise<EstadoFormulario> {
-  const adminId = await exigirAdmin();
+  const ctx = await exigirPanel();
 
   const fechaEnviada = formData.get("fecha_pago");
 
@@ -166,8 +200,10 @@ export async function registrarPago(
 
   const datos = parseado.data;
 
+  // El mismo mensaje que si no existiera: a un admin de otra sucursal no se le
+  // confirma que la ficha existe.
   const socio = await prisma.usuario.findFirst({
-    where: { id: datos.usuario_id, rol: "CLIENTE" },
+    where: { id: datos.usuario_id, rol: "CLIENTE", sede_id: ctx.sedeId },
     select: { id: true },
   });
 
@@ -191,7 +227,10 @@ export async function registrarPago(
       tipo_pase: datos.tipo_pase,
       metodo_pago: datos.metodo_pago,
       // Regla de Oro 4: el admin logueado, del servidor.
-      registrado_por: adminId,
+      registrado_por: ctx.usuarioId,
+      // Regla de Oro 5: dónde se cobró queda sellado. Si mañana el socio se
+      // traslada, esta plata sigue contando en la caja de esta sucursal.
+      sede_id: ctx.sedeId,
     },
   });
 
@@ -218,7 +257,7 @@ export async function repetirUltimoPago(
   _estadoPrevio: EstadoFormulario,
   formData: FormData,
 ): Promise<EstadoFormulario> {
-  const adminId = await exigirAdmin();
+  const ctx = await exigirPanel();
 
   const parseado = z
     .object({ usuario_id: z.string().trim().min(1) })
@@ -231,7 +270,10 @@ export async function repetirUltimoPago(
   const usuarioId = parseado.data.usuario_id;
 
   const ultimo = await prisma.pago.findFirst({
-    where: { usuario_id: usuarioId, usuario: { rol: "CLIENTE" } },
+    where: {
+      usuario_id: usuarioId,
+      usuario: { rol: "CLIENTE", sede_id: ctx.sedeId },
+    },
     orderBy: { fecha_vencimiento: "desc" },
     select: { monto: true, tipo_pase: true, metodo_pago: true },
   });
@@ -254,7 +296,8 @@ export async function repetirUltimoPago(
       fecha_vencimiento: fechaVencimiento,
       tipo_pase: ultimo.tipo_pase,
       metodo_pago: ultimo.metodo_pago,
-      registrado_por: adminId,
+      registrado_por: ctx.usuarioId,
+      sede_id: ctx.sedeId,
     },
   });
 
@@ -285,10 +328,15 @@ export interface PagoDelHistorial {
 export async function obtenerHistorialDePagos(
   usuarioId: string,
 ): Promise<PagoDelHistorial[]> {
-  await exigirAdmin();
+  const ctx = await exigirPanel();
 
+  // Se filtra por la sede del SOCIO, no por la del pago: es su historial
+  // completo. Lo que la sede controla es si este admin puede verlo.
   const pagos = await prisma.pago.findMany({
-    where: { usuario_id: usuarioId, usuario: { rol: "CLIENTE" } },
+    where: {
+      usuario_id: usuarioId,
+      usuario: { rol: "CLIENTE", sede_id: ctx.sedeId },
+    },
     orderBy: { fecha_pago: "desc" },
     select: {
       id_pago: true,
@@ -331,7 +379,7 @@ export async function editarSocio(
   _estadoPrevio: EstadoFormulario,
   formData: FormData,
 ): Promise<EstadoFormulario> {
-  await exigirAdmin();
+  const ctx = await exigirPanel();
 
   const parseado = esquemaEdicion.safeParse({
     usuario_id: formData.get("usuario_id"),
@@ -340,7 +388,6 @@ export async function editarSocio(
     apellido: formData.get("apellido"),
     telefono: formData.get("telefono") ?? undefined,
     email: formData.get("email") ?? undefined,
-    sede_id: formData.get("sede_id"),
   });
 
   if (!parseado.success) {
@@ -350,7 +397,7 @@ export async function editarSocio(
   const datos = parseado.data;
 
   const socio = await prisma.usuario.findFirst({
-    where: { id: datos.usuario_id, rol: "CLIENTE" },
+    where: { id: datos.usuario_id, rol: "CLIENTE", sede_id: ctx.sedeId },
     select: { id: true, dni: true },
   });
 
@@ -380,7 +427,8 @@ export async function editarSocio(
       apellido: datos.apellido,
       telefono: datos.telefono || null,
       email: datos.email || null,
-      sede_id: datos.sede_id,
+      // La sede NO se edita acá. Cambiarla es mudar a una persona de sucursal,
+      // y eso tiene su propia acción (`trasladarSocio`) con su confirmación.
     },
   });
 
@@ -407,7 +455,7 @@ export async function reiniciarClaveDelSocio(
   _estadoPrevio: EstadoFormulario,
   formData: FormData,
 ): Promise<EstadoFormulario> {
-  await exigirAdmin();
+  const ctx = await exigirPanel();
 
   const parseado = esquemaClaveSocio.safeParse({
     usuario_id: formData.get("usuario_id"),
@@ -419,7 +467,11 @@ export async function reiniciarClaveDelSocio(
   }
 
   const socio = await prisma.usuario.findFirst({
-    where: { id: parseado.data.usuario_id, rol: "CLIENTE" },
+    where: {
+      id: parseado.data.usuario_id,
+      rol: "CLIENTE",
+      sede_id: ctx.sedeId,
+    },
     select: { id: true, nombre: true },
   });
 
@@ -441,14 +493,162 @@ export async function cambiarEstadoSocio(
   usuarioId: string,
   nuevoEstado: "ACTIVO" | "INACTIVO",
 ) {
-  await exigirAdmin();
+  const ctx = await exigirPanel();
 
-  await prisma.usuario.update({
-    where: { id: usuarioId },
+  // `updateMany` y no `update`: permite meter la sede en el `where`. Con
+  // `update` habría que buscar primero y el chequeo quedaría en dos pasos.
+  await prisma.usuario.updateMany({
+    where: { id: usuarioId, rol: "CLIENTE", sede_id: ctx.sedeId },
     data: { estado: nuevoEstado },
   });
 
   revalidatePath(`/socios/${usuarioId}`);
   revalidatePath("/socios");
   revalidatePath("/dashboard");
+}
+
+// =============================================================================
+// Rutinas
+// =============================================================================
+
+/**
+ * Sube la rutina de un socio.
+ *
+ * El archivo se valida por su contenido en `validarArchivoDeRutina` y el profe
+ * que la sube sale de la sesión, nunca del formulario: es la Regla de Oro 4
+ * aplicada a rutinas.
+ *
+ * Cada subida deja una fila nueva; la anterior queda como histórico.
+ */
+export async function subirRutina(
+  _estadoPrevio: EstadoFormulario,
+  formData: FormData,
+): Promise<EstadoFormulario> {
+  const ctx = await exigirPanel();
+
+  const usuarioId = formData.get("usuario_id");
+  const archivo = formData.get("archivo");
+
+  if (typeof usuarioId !== "string" || !usuarioId) {
+    return { error: "Falta el socio." };
+  }
+
+  if (!(archivo instanceof File) || archivo.size === 0) {
+    return { error: "Elegí un archivo." };
+  }
+
+  const socio = await prisma.usuario.findFirst({
+    where: { id: usuarioId, rol: "CLIENTE", sede_id: ctx.sedeId },
+    select: { id: true, nombre: true },
+  });
+
+  if (!socio) {
+    return { error: "Ese socio no existe." };
+  }
+
+  const resultado = await guardarRutina({
+    usuarioId: socio.id,
+    adminId: ctx.usuarioId,
+    nombre: archivo.name,
+    bytes: new Uint8Array(await archivo.arrayBuffer()),
+  });
+
+  if (!resultado.ok) {
+    return { error: resultado.error };
+  }
+
+  revalidatePath(`/socios/${socio.id}`);
+  revalidatePath("/mi-cuenta");
+
+  return { ok: `Rutina de ${socio.nombre} actualizada.` };
+}
+
+/** Borra la rutina actual de un socio. El histórico anterior no se toca. */
+export async function eliminarRutina(
+  _estadoPrevio: EstadoFormulario,
+  formData: FormData,
+): Promise<EstadoFormulario> {
+  const ctx = await exigirPanel();
+
+  const idRutina = formData.get("id_rutina");
+  const usuarioId = formData.get("usuario_id");
+
+  if (typeof idRutina !== "string" || typeof usuarioId !== "string") {
+    return { error: "Datos inválidos." };
+  }
+
+  const suya = await prisma.usuario.findFirst({
+    where: { id: usuarioId, rol: "CLIENTE", sede_id: ctx.sedeId },
+    select: { id: true },
+  });
+
+  if (!suya) {
+    return { error: "Ese socio no existe." };
+  }
+
+  const borrada = await borrarRutina(idRutina);
+
+  if (!borrada) {
+    return { error: "Esa rutina ya no existe." };
+  }
+
+  revalidatePath(`/socios/${usuarioId}`);
+  revalidatePath("/mi-cuenta");
+
+  return { ok: "Rutina eliminada." };
+}
+
+// =============================================================================
+// Traslado entre sedes
+// =============================================================================
+
+/**
+ * Trae a un socio de otra sucursal a la sede en la que se está trabajando.
+ *
+ * Es el caso del que se mudó de barrio. Se dispara desde el alta, cuando el DNI
+ * tipeado ya existe en otra sede: el sistema muestra de quién es y el profe
+ * confirma que es la misma persona que tiene enfrente.
+ *
+ * Solo se puede traer HACIA la propia sede, nunca mandar a alguien a otra. Un
+ * profe no puede sacar un socio del padrón ajeno sin que esa sucursal se entere;
+ * para traerlo, en cambio, la persona está ahí. El dueño hace cualquier traslado
+ * porque puede cambiar de sede activa y quedar parado en la que recibe.
+ *
+ * Los pagos y las asistencias viejos NO se tocan: conservan su `sede_id`, así
+ * que la caja pasada de la sucursal anterior queda como estaba. Lo único que se
+ * muda es la persona.
+ */
+export async function trasladarSocio(
+  _estadoPrevio: EstadoFormulario,
+  formData: FormData,
+): Promise<EstadoFormulario> {
+  const ctx = await exigirPanel();
+
+  const usuarioId = formData.get("usuario_id");
+
+  if (typeof usuarioId !== "string" || !usuarioId) {
+    return { error: "Falta el socio." };
+  }
+
+  const socio = await prisma.usuario.findFirst({
+    where: { id: usuarioId, rol: "CLIENTE" },
+    select: { id: true, nombre: true, apellido: true, sede_id: true },
+  });
+
+  if (!socio) {
+    return { error: "Ese socio no existe." };
+  }
+
+  if (socio.sede_id === ctx.sedeId) {
+    return { error: `${socio.nombre} ya es socio de esta sede.` };
+  }
+
+  await prisma.usuario.update({
+    where: { id: socio.id },
+    data: { sede_id: ctx.sedeId },
+  });
+
+  revalidatePath("/socios");
+  revalidatePath("/dashboard");
+  redirect(`/socios/${socio.id}`);
 }

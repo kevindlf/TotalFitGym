@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { BotonPago } from "./boton-pago";
 import { HistorialPagos } from "./historial-pagos";
 import { TarjetaSocio } from "./tarjeta-socio";
+import { exigirPanel } from "@/lib/sede";
 
 export const metadata: Metadata = { title: "Socios · Total Fit" };
 
@@ -79,7 +80,8 @@ export default async function PaginaSocios({
     ? (filtroCrudo as Filtro)
     : "todos";
 
-  const todos = await listarSocios(q);
+  const ctx = await exigirPanel();
+  const todos = await listarSocios(ctx.sedeId, q);
   const socios = aplicarFiltro(todos, filtro);
 
   const facturadoVisible = socios.reduce(

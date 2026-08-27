@@ -23,10 +23,14 @@ export const config = {
     "/socios/:path*",
     "/pagos/:path*",
     "/asistencias/:path*",
-    "/rutinas/:path*",
     "/recepcion/:path*",
     "/personal/:path*",
-    // Las APIs del panel. Se excluye /api/auth, que es el propio login.
-    "/api/((?!auth).*)",
+    // Las APIs del panel. Quedan afuera dos:
+    //   - /api/auth, que es el propio login.
+    //   - /api/mi-rutina, que la pide el SOCIO con su cookie firmada, no un
+    //     admin. Si entrara acá recibiría un redirect a /ingresar en vez de su
+    //     archivo. Se autoriza sola, dentro del handler.
+    // /api/rutina/[usuarioId] (la del admin) sí queda cubierta.
+    "/api/((?!auth|mi-rutina).*)",
   ],
 };

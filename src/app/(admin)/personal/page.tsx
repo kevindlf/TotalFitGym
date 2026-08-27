@@ -17,15 +17,18 @@ import { listarSedes } from "@/lib/socios";
 import { BotonEstado, CambiarPassword } from "./acciones-miembro";
 import { FormularioPersonal } from "./formulario-personal";
 import { TarjetaMiembro } from "./tarjeta-miembro";
+import { exigirPanel } from "@/lib/sede";
 
 export const metadata: Metadata = { title: "Personal · Total Fit" };
 
 export const dynamic = "force-dynamic";
 
 export default async function PaginaPersonal() {
+  const ctx = await exigirPanel();
+
   const [sesion, personal, sedes] = await Promise.all([
     auth(),
-    listarPersonal(),
+    listarPersonal(ctx.sedeId),
     listarSedes(),
   ]);
 

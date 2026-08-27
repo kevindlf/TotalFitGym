@@ -2,6 +2,7 @@ import { compare, hash } from "bcryptjs";
 
 import { calcularEstadoCuota, mensajeParaSocio } from "./cuota";
 import { prisma } from "./prisma";
+import { obtenerRutinaActual } from "./rutinas";
 
 /** Mismas rondas que usa el personal. */
 const RONDAS_BCRYPT = 12;
@@ -149,6 +150,8 @@ export interface DetalleDelSocio {
   }[];
   ultimosIngresos: string[];
   totalIngresos: number;
+  /** La rutina vigente. El archivo no viaja acá: se baja por /api/mi-rutina. */
+  rutina: { nombre: string; actualizadaEn: string } | null;
 }
 
 export async function obtenerDetalleDelSocio(
@@ -171,7 +174,7 @@ export async function obtenerDetalleDelSocio(
     return null;
   }
 
-  const [pagos, ingresos, totalIngresos] = await Promise.all([
+  const [pagos, ingresos, totalIngresos, rutina] = await Promise.all([
     prisma.pago.findMany({
       where: { usuario_id: usuarioId },
       orderBy: { fecha_pago: "desc" },
@@ -191,6 +194,7 @@ export async function obtenerDetalleDelSocio(
       select: { fecha_hora: true },
     }),
     prisma.asistencia.count({ where: { usuario_id: usuarioId } }),
+    obtenerRutinaActual(usuarioId),
   ]);
 
   // El vencimiento que vale es el más lejano, no el del último pago cargado.
@@ -233,5 +237,11 @@ export async function obtenerDetalleDelSocio(
       ingreso.fecha_hora.toISOString(),
     ),
     totalIngresos,
+    rutina: rutina
+      ? {
+          nombre: rutina.nombre_archivo,
+          actualizadaEn: rutina.actualizada_en.toISOString(),
+        }
+      : null,
   };
 }

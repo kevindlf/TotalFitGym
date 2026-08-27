@@ -29,8 +29,14 @@ function inicioDelDiaLocal(ahora = new Date()): Date {
   return new Date(startOfDay(new TZDate(ahora, ZONA_HORARIA)).getTime());
 }
 
-export async function obtenerResumen(): Promise<ResumenDelGimnasio> {
-  const socios = await listarSocios();
+/**
+ * @param sedeId  La sucursal a medir. `null` = la cadena entera, y eso solo lo
+ *                pide el dueño: un admin siempre pasa su propia sede.
+ */
+export async function obtenerResumen(
+  sedeId: string | null,
+): Promise<ResumenDelGimnasio> {
+  const socios = await listarSocios(sedeId);
   const ahoraLocal = new TZDate(new Date(), ZONA_HORARIA);
 
   const porEstado: Record<EstadoCuota, number> = {
@@ -59,18 +65,25 @@ export async function obtenerResumen(): Promise<ResumenDelGimnasio> {
     .sort((a, b) => (a.cuota.diasRestantes ?? 0) - (b.cuota.diasRestantes ?? 0));
 
   const [cobros, asistenciasDeHoy] = await Promise.all([
+    // La caja SÍ se filtra por dónde se cobró (`Pago.sede_id`) y no por la sede
+    // actual del socio: la plata quedó donde entró, aunque después la persona
+    // se haya trasladado.
     prisma.pago.aggregate({
       where: {
         fecha_pago: {
           gte: new Date(startOfMonth(ahoraLocal).getTime()),
           lte: new Date(endOfMonth(ahoraLocal).getTime()),
         },
+        ...(sedeId ? { sede_id: sedeId } : {}),
       },
       _sum: { monto: true },
       _count: true,
     }),
     prisma.asistencia.count({
-      where: { fecha_hora: { gte: inicioDelDiaLocal() } },
+      where: {
+        fecha_hora: { gte: inicioDelDiaLocal() },
+        ...(sedeId ? { sede_id: sedeId } : {}),
+      },
     }),
   ]);
 
@@ -86,4 +99,41 @@ export async function obtenerResumen(): Promise<ResumenDelGimnasio> {
     },
     asistenciasDeHoy,
   };
+}
+
+export interface ResumenDeSede {
+  id_sede: string;
+  nombre: string;
+  socios: number;
+  morosos: number;
+  cobradoEsteMes: number;
+}
+
+/**
+ * Una línea por sucursal, para el dashboard del dueño.
+ *
+ * Reusa `obtenerResumen` en vez de escribir otra consulta agregada: así la
+ * definición de "moroso" sigue viviendo en un solo lugar y no puede quedar
+ * distinta entre la pantalla de una sede y la de la cadena.
+ */
+export async function obtenerResumenPorSede(): Promise<ResumenDeSede[]> {
+  const sedes = await prisma.sede.findMany({
+    where: { estado: "ACTIVA" },
+    select: { id_sede: true, nombre: true },
+    orderBy: { nombre: "asc" },
+  });
+
+  return Promise.all(
+    sedes.map(async (sede) => {
+      const resumen = await obtenerResumen(sede.id_sede);
+
+      return {
+        id_sede: sede.id_sede,
+        nombre: sede.nombre,
+        socios: resumen.totalSocios,
+        morosos: resumen.morosos.length,
+        cobradoEsteMes: resumen.cobrosDelMes.total,
+      };
+    }),
+  );
 }

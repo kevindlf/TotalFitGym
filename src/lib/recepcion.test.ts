@@ -14,13 +14,19 @@ vi.mock("./prisma", () => ({
 const buscarUsuario = vi.mocked(prisma.usuario.findUnique);
 const crearAsistencia = vi.mocked(prisma.asistencia.create);
 
+/** La sede desde la que se consulta en todos los tests. */
+const SEDE = "sede_1";
+const OTRA = "sede_2";
+
 type UsuarioDePuerta = {
   id: string;
   dni: string;
   nombre: string;
   apellido: string;
-  rol: "ADMIN" | "CLIENTE";
+  rol: "ADMIN" | "DUENIO" | "CLIENTE";
   estado: "ACTIVO" | "INACTIVO";
+  sede_id: string;
+  sede: { nombre: string };
   pagos: { fecha_vencimiento: Date }[];
 };
 
@@ -32,6 +38,8 @@ function socio(parcial: Partial<UsuarioDePuerta> = {}): UsuarioDePuerta {
     apellido: "Pérez",
     rol: "CLIENTE",
     estado: "ACTIVO",
+    sede_id: SEDE,
+    sede: { nombre: "San Martín" },
     pagos: [{ fecha_vencimiento: addDays(new Date(), 20) }],
     ...parcial,
   };
@@ -49,21 +57,25 @@ describe("evaluarIngresoPorDni", () => {
   it("deja pasar al socio con cuota vigente y registra la asistencia", async () => {
     devolver(socio());
 
-    const resultado = await evaluarIngresoPorDni("30123456");
+    const resultado = await evaluarIngresoPorDni("30123456", SEDE);
 
     expect(resultado.estado).toBe("ACTIVO");
     expect(resultado.accesoPermitido).toBe(true);
     expect(resultado.socio?.apellido).toBe("Pérez");
     expect(resultado.asistenciaRegistrada).toBe(true);
     expect(crearAsistencia).toHaveBeenCalledWith({
-      data: { usuario_id: "usr_1", metodo_registro: "DNI_MANUAL" },
+      data: {
+        usuario_id: "usr_1",
+        metodo_registro: "DNI_MANUAL",
+        sede_id: SEDE,
+      },
     });
   });
 
   it("deja pasar al próximo a vencer y también registra la asistencia", async () => {
     devolver(socio({ pagos: [{ fecha_vencimiento: addDays(new Date(), 3) }] }));
 
-    const resultado = await evaluarIngresoPorDni("30123456");
+    const resultado = await evaluarIngresoPorDni("30123456", SEDE);
 
     expect(resultado.estado).toBe("PROXIMO_A_VENCER");
     expect(resultado.accesoPermitido).toBe(true);
@@ -74,7 +86,7 @@ describe("evaluarIngresoPorDni", () => {
   it("NO registra asistencia cuando la cuota está vencida", async () => {
     devolver(socio({ pagos: [{ fecha_vencimiento: subDays(new Date(), 10) }] }));
 
-    const resultado = await evaluarIngresoPorDni("30123456");
+    const resultado = await evaluarIngresoPorDni("30123456", SEDE);
 
     expect(resultado.estado).toBe("VENCIDO");
     expect(resultado.accesoPermitido).toBe(false);
@@ -86,7 +98,7 @@ describe("evaluarIngresoPorDni", () => {
   it("rechaza al socio sin ningún pago y no registra asistencia", async () => {
     devolver(socio({ pagos: [] }));
 
-    const resultado = await evaluarIngresoPorDni("30123456");
+    const resultado = await evaluarIngresoPorDni("30123456", SEDE);
 
     expect(resultado.estado).toBe("VENCIDO");
     expect(resultado.fechaVencimiento).toBeNull();
@@ -96,7 +108,7 @@ describe("evaluarIngresoPorDni", () => {
   it("rechaza un DNI que no está en el sistema sin tocar la bitácora", async () => {
     devolver(null);
 
-    const resultado = await evaluarIngresoPorDni("99999999");
+    const resultado = await evaluarIngresoPorDni("99999999", SEDE);
 
     expect(resultado.motivo).toBe("DNI_NO_REGISTRADO");
     expect(resultado.socio).toBeNull();
@@ -106,7 +118,7 @@ describe("evaluarIngresoPorDni", () => {
   it("rechaza el DNI de un admin: la puerta es para socios", async () => {
     devolver(socio({ rol: "ADMIN" }));
 
-    const resultado = await evaluarIngresoPorDni("30123456");
+    const resultado = await evaluarIngresoPorDni("30123456", SEDE);
 
     expect(resultado.motivo).toBe("DNI_NO_REGISTRADO");
     expect(crearAsistencia).not.toHaveBeenCalled();
@@ -115,7 +127,7 @@ describe("evaluarIngresoPorDni", () => {
   it("rechaza al socio dado de baja aunque le quede cuota paga", async () => {
     devolver(socio({ estado: "INACTIVO" }));
 
-    const resultado = await evaluarIngresoPorDni("30123456");
+    const resultado = await evaluarIngresoPorDni("30123456", SEDE);
 
     expect(resultado.accesoPermitido).toBe(false);
     expect(resultado.motivo).toBe("CUENTA_INACTIVA");
@@ -127,7 +139,7 @@ describe("evaluarIngresoPorDni", () => {
     // primer pago que llega ya es el más lejano.
     devolver(socio({ pagos: [{ fecha_vencimiento: addDays(new Date(), 25) }] }));
 
-    await evaluarIngresoPorDni("30123456");
+    await evaluarIngresoPorDni("30123456", SEDE);
 
     expect(buscarUsuario).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -139,5 +151,43 @@ describe("evaluarIngresoPorDni", () => {
         }),
       }),
     );
+  });
+});
+
+describe("aislamiento entre sedes", () => {
+  it("rechaza al socio de otra sucursal y le dice a cuál pertenecer", async () => {
+    devolver(
+      socio({ sede_id: OTRA, sede: { nombre: "Godoy Cruz" } }),
+    );
+
+    const resultado = await evaluarIngresoPorDni("30123456", SEDE);
+
+    expect(resultado.motivo).toBe("OTRA_SEDE");
+    expect(resultado.accesoPermitido).toBe(false);
+    expect(resultado.sedeDelSocio).toBe("Godoy Cruz");
+  });
+
+  it("no escribe en la bitácora cuando el socio es de otra sede", async () => {
+    devolver(socio({ sede_id: OTRA, sede: { nombre: "Godoy Cruz" } }));
+
+    await evaluarIngresoPorDni("30123456", SEDE);
+
+    // La bitácora es de ingresos y este ingreso no ocurrió.
+    expect(crearAsistencia).not.toHaveBeenCalled();
+  });
+
+  it("la cuota al día no alcanza si la sede no es la propia", async () => {
+    devolver(
+      socio({
+        sede_id: OTRA,
+        sede: { nombre: "Godoy Cruz" },
+        pagos: [{ fecha_vencimiento: addDays(new Date(), 25) }],
+      }),
+    );
+
+    const resultado = await evaluarIngresoPorDni("30123456", SEDE);
+
+    expect(resultado.accesoPermitido).toBe(false);
+    expect(resultado.motivo).toBe("OTRA_SEDE");
   });
 });

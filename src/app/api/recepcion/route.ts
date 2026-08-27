@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { auth } from "@/lib/auth";
 import { evaluarIngresoPorDni } from "@/lib/recepcion";
+import { contextoDelPanel } from "@/lib/sede";
 
 /**
  * API de la puerta.
@@ -20,11 +20,13 @@ const esquemaConsulta = z.object({
 });
 
 export async function POST(request: Request) {
-  // Regla de Oro 4: la identidad sale de la sesión del servidor. El proxy ya
-  // hace un chequeo optimista, pero no alcanza como autorización.
-  const sesion = await auth();
+  // Reglas de Oro 4 y 5: la identidad Y la sede salen de la sesión del
+  // servidor. El proxy ya hace un chequeo optimista, pero no alcanza como
+  // autorización. Que la sede no venga en el cuerpo del pedido es lo que impide
+  // consultar el padrón de otra sucursal desde esta pantalla.
+  const contexto = await contextoDelPanel();
 
-  if (sesion?.user?.rol !== "ADMIN") {
+  if (!contexto) {
     return NextResponse.json(
       { error: "Necesitás iniciar sesión para usar la recepción." },
       { status: 401 },
@@ -48,7 +50,10 @@ export async function POST(request: Request) {
     );
   }
 
-  const resultado = await evaluarIngresoPorDni(parseado.data.dni);
+  const resultado = await evaluarIngresoPorDni(
+    parseado.data.dni,
+    contexto.sedeId,
+  );
 
   return NextResponse.json(resultado);
 }

@@ -17,6 +17,7 @@ import {
   type RangoDeAsistencias,
 } from "@/lib/asistencias";
 import { formatearFechaHora } from "@/lib/formato";
+import { exigirPanel } from "@/lib/sede";
 
 export const metadata: Metadata = { title: "Ingresos · Total Fit" };
 
@@ -39,7 +40,10 @@ export default async function PaginaAsistencias({
     ? (rangoCrudo as RangoDeAsistencias)
     : "hoy";
 
+  const ctx = await exigirPanel();
+
   const { ingresos, total, sociosDistintos, hayMas } = await listarAsistencias(
+    ctx.sedeId,
     rango,
     q,
   );

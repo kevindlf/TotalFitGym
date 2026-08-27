@@ -31,25 +31,31 @@ Escala real actual (planilla): ~349 socios (216 activos, 117 vencidos, 16 próxi
 
 ### SEDE (sucursal)
 - `id_sede` (PK), `nombre`, `direccion`, `estado` (ACTIVA | CERRADA)
-- Total Fit puede tener varias sedes. Un usuario pertenece a **una** sede.
+- Total Fit es una **cadena**: San Martín, Ciudad y Godoy Cruz. Un usuario pertenece a **una** sede.
+- Un solo servidor y una sola base para todas, pero **los datos de cada sucursal no se cruzan** (Regla de Oro 5). No hay una tabla por sede: el aislamiento sale de filtrar por `sede_id`, que ya viaja en la sesión.
 
 ### USUARIO (clave de negocio = DNI)
-- `id` (PK técnica), `dni` (**único e irrepetible**, índice unique), `sede_id` (FK), `nombre`, `apellido`, `email`, `telefono`, `password` (obligatorio si ADMIN, nullable si CLIENTE), `rol` (ADMIN | CLIENTE), `estado` (ACTIVO | INACTIVO), `fecha_registro`
+- `id` (PK técnica), `dni` (**único e irrepetible en toda la cadena**, índice unique), `sede_id` (FK), `nombre`, `apellido`, `email`, `telefono`, `password` (obligatorio si DUENIO/ADMIN, nullable si CLIENTE), `rol` (DUENIO | ADMIN | CLIENTE), `estado` (ACTIVO | INACTIVO), `fecha_registro`
 - Un solo modelo Usuario con dos roles. No hacer tablas separadas para admin y cliente.
-- **ADMIN incluye al dueño y a los profes/empleados que cobran.** Cualquier ADMIN puede dar de alta a otro desde `/personal`. El DNI es único para todo el sistema, no por rol: una persona no puede tener ficha de socio y de profe a la vez.
+- **ADMIN es el personal de UNA sucursal** — quien la maneja y sus profes. Ve y toca solo lo de su sede. Puede dar de alta a otro ADMIN, siempre en su misma sede.
+- **DUENIO es el dueño de la cadena.** Ve el total de las tres sedes en el dashboard y elige con un selector sobre cuál sucursal opera; ahí adentro se comporta como el ADMIN de esa sede.
+- El DNI es único para todo el sistema, no por rol ni por sede: una persona no puede tener ficha de socio y de profe a la vez, ni dos fichas de socio en dos sucursales. Si se muda, se **traslada** (ver Regla de Oro 5).
 - La obligatoriedad de `password` para ADMIN no la puede expresar Prisma: se valida en la API y en el seed.
 
 ### PAGO
-- `id_pago` (PK), `usuario_id` (FK → Usuario), `monto` (numérico libre), `fecha_pago`, `fecha_vencimiento` (calculada), `metodo_pago` (EFECTIVO | TRANSFERENCIA | QR | MERCADO_PAGO), `tipo_pase` (MEDIO | LIBRE | ... configurable), `registrado_por` (FK → Usuario admin que cobró)
+- `id_pago` (PK), `usuario_id` (FK → Usuario), `monto` (numérico libre), `fecha_pago`, `fecha_vencimiento` (calculada), `metodo_pago` (EFECTIVO | TRANSFERENCIA | QR | MERCADO_PAGO), `tipo_pase` (MEDIO | LIBRE | ... configurable), `registrado_por` (FK → Usuario admin que cobró), `sede_id` (FK → Sede **donde se cobró**)
+- `sede_id` **no se deduce del socio**: se sella al crear el pago y no cambia nunca. Si el socio después se traslada de sucursal, esta plata sigue contando en la caja donde entró. Sin esta columna, un traslado reescribiría la caja pasada de las dos sedes.
 - El **monto es libre** (en la planilla el mismo plan aparece con montos distintos).
 
 ### ASISTENCIA (bitácora — inmutable)
-- `id_asistencia` (PK), `usuario_id` (FK → Usuario), `fecha_hora`, `metodo_registro` (fijo: DNI_MANUAL en el MVP)
+- `id_asistencia` (PK), `usuario_id` (FK → Usuario), `fecha_hora`, `metodo_registro` (fijo: DNI_MANUAL en el MVP), `sede_id` (FK → Sede, **por qué puerta entró**)
 - Solo se crea y se lee. **Nunca** se edita ni se borra.
 
 ### RUTINA (archivo del socio)
-- `id_rutina` (PK), `usuario_id` (FK → Usuario), `archivo_url` (PDF o imagen en Supabase Storage), `actualizada_en`
-- El admin/profe sube el archivo; el socio lo ve en su portal. Una rutina "actual" por socio (se puede versionar guardando históricos). **No** hay editor de ejercicios estructurado en v1.
+- `id_rutina` (PK), `usuario_id` (FK → Usuario), `archivo_url` (**ruta dentro del bucket privado**, no una URL pública), `nombre_archivo`, `subida_por` (FK → Usuario admin), `actualizada_en`
+- El admin/profe sube el archivo; el socio lo ve en su portal. Cada subida crea una fila: la rutina "actual" es la de `actualizada_en` más reciente y las anteriores quedan como histórico. **No** hay editor de ejercicios estructurado en v1.
+- `subida_por` sigue el mismo criterio que `Pago.registrado_por`: sale de la sesión del servidor. Se puede responder qué profe le cargó la rutina a quién.
+- El archivo **nunca se linkea directo ni con signed URL**: se sirve por route handler, que primero verifica la sesión. Una signed URL es la credencial en sí, y una URL se reenvía por WhatsApp.
 
 ### Relaciones (1:N)
 Sede → Usuarios · Usuario(cliente) → Pagos · Usuario(cliente) → Asistencias · Usuario(cliente) → Rutina · Usuario(admin) → Pagos (como `registrado_por`)
@@ -67,6 +73,14 @@ Sede → Usuarios · Usuario(cliente) → Pagos · Usuario(cliente) → Asistenc
 3. **Inmutabilidad de asistencias.** Una vez registrada, queda sellada. La API de asistencias expone solo `create` y `read`. Sin update ni delete.
 4. **Trazabilidad de caja.** Todo Pago guarda automáticamente `registrado_por` = admin logueado, tomado del **lado del servidor** (sesión), nunca de un campo del cliente. No entra dinero anónimo.
 
+5. **Soberanía de la sede.** Cada sucursal ve únicamente lo suyo.
+   - La sede sobre la que se opera sale **siempre de la sesión del servidor** (`src/lib/sede.ts`), nunca de un formulario, una cookie ni la URL. Para un ADMIN es la de su propia ficha, tomada del JWT firmado; para un DUENIO es la que eligió en el selector.
+   - **Toda** consulta del panel se acota a esa sede. Las funciones de `/lib` reciben `sedeId` como **primer parámetro obligatorio**: si se olvida, no compila. `null` significa "toda la cadena" y es una decisión explícita que solo toma el dueño.
+   - Pedir un socio de otra sucursal por su id devuelve **404**, no un error de permisos: no se confirma que la ficha exista.
+   - En la puerta, un socio de otra sede es **rojo** aunque tenga la cuota al día, y **no se registra asistencia** — ese ingreso no ocurrió. La pantalla dice de qué sucursal es, para que el profe sepa adónde mandarlo.
+   - Un socio que se muda se **traslada**: el admin puede traerlo **hacia** su sede (nunca empujarlo a otra), confirmando nombre y sucursal de origen. Sus pagos y asistencias viejos conservan su `sede_id`.
+   - El candado del "último admin activo" se cuenta **por sede**: si fuera global, se podría dejar una sucursal sin nadie que pueda entrar al panel.
+
 > El **estado de cuota** (ACTIVO / PRÓXIMO A VENCER / EN PERÍODO DE PAGO / VENCIDO) es **derivado** de `fecha_vencimiento`, se calcula al vuelo — no se guarda. El `estado` de Usuario (ACTIVO/INACTIVO) es la vigencia de la cuenta, cosa distinta.
 
 ## 5. Alcance del MVP (v1)
@@ -81,8 +95,11 @@ Sede → Usuarios · Usuario(cliente) → Pagos · Usuario(cliente) → Asistenc
 - [x] **Página pública** del gimnasio + puerta única de ingreso.
 - [x] **Portal cliente**: pantalla propia con su cuota, su plan, sus pagos y sus ingresos.
 - [x] **Claves de socio**: se las crea el propio socio verificando los últimos 4 dígitos de su teléfono.
-- [ ] **Descarga de rutina** por el socio. Ya hay clave; falta el almacenamiento (Supabase Storage).
-- [ ] Carga de **rutina** por el admin (subir PDF/imagen a Supabase Storage).
+- [x] **Descarga de rutina** por el socio, solo con sesión `COMPLETO`. **Apagada** — ver abajo.
+- [x] Carga de **rutina** por el admin (PDF/imagen a Supabase Storage, bucket privado). **Apagada** — ver abajo.
+- [x] **Aislamiento por sede** (Regla de Oro 5) y rol `DUENIO`.
+
+> **Rutinas está construido y apagado.** El gimnasio ya reparte las rutinas con un QR propio, así que `RUTINAS_HABILITADAS=false` las saca de la ficha del socio, de `/mi-cuenta` y hace que sus rutas devuelvan 404. El código y sus 21 tests quedan enteros: el día que lo quieran se prende la variable. No borrarlo.
 - [ ] Script de **importación** de la planilla actual (ver sección 7).
 
 ### Fuera del MVP (fases siguientes)
@@ -110,9 +127,9 @@ Estado real del proyecto (difiere del plan original: `/prisma` va en la raíz po
       /auth  /recepcion
   /components
     /admin  /publico  /recepcion  /ui
-  /lib                     # prisma, auth, cuota, pases, socios, personal, metricas,
-                           # portal, recepcion, asistencias, formato, gimnasio,
-                           # sesion-socio
+  /lib                     # prisma, auth, sede, cuota, pases, socios, personal,
+                           # metricas, portal, recepcion, asistencias, formato,
+                           # gimnasio, sesion-socio, rutinas, supabase
   /proxy.ts                # el "middleware" de Next 16
   /generated/prisma        # cliente generado (gitignoreado)
 ```
@@ -129,8 +146,10 @@ Estado real del proyecto (difiere del plan original: `/prisma` va en la raíz po
 | `/socios/[id]` | ADMIN | Ficha: pagos con quién cobró, ingresos, registrar pago, baja lógica |
 | `/socios/[id]/editar` | ADMIN | Corregir datos, incluido el DNI (sigue siendo único) |
 | `/asistencias` | ADMIN | Bitácora de ingresos, solo lectura |
-| `/personal` | ADMIN | Alta de profes/empleados, reset de contraseña, baja |
-| `/recepcion` | ADMIN | Puerta: DNI → verde/amarillo/naranja/rojo + asistencia |
+| `/personal` | ADMIN | Alta de profes/empleados **de su sede**, reset de contraseña, baja |
+| `/recepcion` | ADMIN | Puerta de **su sede**: DNI → verde/amarillo/naranja/rojo + asistencia |
+
+Todas las pantallas del panel están acotadas a la sede de la sesión. El **DUENIO** entra a las mismas y elige la sucursal con un selector en el encabezado; su dashboard suma además el total de la cadena.
 
 ## 7. Importación de la planilla actual (trampas)
 
