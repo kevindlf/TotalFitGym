@@ -1,4 +1,4 @@
-import { AtSign, Check, Clock, Mail, MapPin, Phone } from "lucide-react";
+import { AtSign, Check, Clock,MapPin, Phone } from "lucide-react";
 import Link from "next/link";
 import { Inter } from "next/font/google";
 
@@ -56,9 +56,6 @@ export default function PaginaPublica() {
               <span className="text-muted-foreground">Del resto nos ocupamos nosotros.</span>
             </h1>
 
-            <p className="text-lg text-pretty text-muted-foreground">
-              {GIMNASIO.lema}
-            </p>
 
             <div className="flex flex-col gap-3 sm:flex-row">
               <Button
