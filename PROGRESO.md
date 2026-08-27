@@ -23,7 +23,6 @@ La base local ya existe (`totalfit_dev` en el PostgreSQL 18 de la máquina) y `.
 
 | Falta | Bloqueado por | Quién |
 |---|---|---|
-| **Probar rutinas contra Supabase** — credenciales en `.env.local` + bucket `rutinas` privado | Cuenta de Supabase | Kevin |
 | **Importar los 349 socios** de la planilla | El CSV de la planilla | Kevin |
 | **Deploy** en Vercel + Supabase | Lo de arriba | Kevin |
 | **Datos reales del gimnasio** en `src/lib/gimnasio.ts` | Dirección, teléfono, Instagram, mail | Kevin |
@@ -59,7 +58,7 @@ Está todo planificado. El orden que destraba más rápido:
 | Personal (`/personal`) | ✅ Alta de profes, reset de clave, baja. |
 | Modo claro / oscuro | ✅ Botón en las 4 superficies. |
 | Responsive | ✅ Tarjetas en celular, tablas en escritorio. |
-| **Rutinas** | ✅ Código completo. Falta probarlo contra un bucket real. |
+| **Rutinas** | ⏸️ Hecho pero **apagado** (`RUTINAS_HABILITADAS=false`): el gimnasio usa su QR. |
 | **Import de la planilla** | ❌ Necesita el CSV. |
 | **Deploy** | ❌ Necesita Supabase. |
 
@@ -92,7 +91,7 @@ También verificado: un socio no puede entrar al panel, una contraseña incorrec
 | `/personal` | Alta de profes/empleados, reset de contraseña, baja |
 | `/recepcion` | La puerta. Se abre desde el dashboard |
 
-Comandos: `npm run dev` · `npm test` (71) · `npm run lint` · `npm run build` · `npm run db:studio` · `npm run db:seed`
+Comandos: `npm run dev` · `npm test` (90) · `npm run lint` · `npm run build` · `npm run db:studio` · `npm run db:seed`
 
 ---
 
@@ -122,10 +121,13 @@ Comandos: `npm run dev` · `npm test` (71) · `npm run lint` · `npm run build` 
 
 ## Decisiones ABIERTAS
 
+- [ ] **Los nombres reales de las tres sedes** y sus direcciones. Van por `SEED_SEDES` en `.env.local`, así cambiarlos no toca código.
+- [ ] **¿La cuota vale en cualquier sucursal?** Hoy el aislamiento es estricto: socio de otra sede = rojo. Si el gimnasio dice que la cuota es de la cadena, es cambiar una condición en `evaluarIngresoPorDni`.
+- [ ] **¿Auditar los traslados?** Hoy el rastro queda implícito en los `sede_id` de los pagos viejos. Si quieren saber quién movió a quién y cuándo, es una tabla más.
+
 - [ ] **¿Se prende la ventana de pago?** Confirmar con el gimnasio cuántos días de tolerancia y poner ese número en `DIAS_DE_GRACIA`.
 - [ ] **Días de vencimiento por tipo de pase.** Hoy ambos en 30. Confirmar.
 - [ ] **Precios de los planes** para la landing (hoy dice "consultanos").
-- [ ] **¿Hace falta un rol DUEÑO separado de EMPLEADO?** Hoy cualquier ADMIN puede dar de alta y de baja a otros. Para un gimnasio chico suele alcanzar. Si se quiere restringir, es un tercer rol en el enum + migración. Los candados anti-lockout ya están.
 - [ ] **Qué era "no entregado".** Kevin mencionó ese estado; se interpretó como el socio que nunca pagó ("Sin pagos"). Si se refería a la **rutina no entregada**, es una columna aparte.
 - [ ] **Anclar el vencimiento a un día fijo del mes** (`dia_de_cobro` por socio) en vez de `fecha_pago + 30`. La ventana de pago ya cubre casi todo el caso.
 
@@ -197,6 +199,19 @@ Las contraseñas están en `.env.local`, que está gitignoreado.
 
 ## Bitácora
 
+- **27/08/2026** — **Aislamiento por sede (`feature/03`).** Total Fit es una cadena de tres sucursales sobre un solo servidor y una sola base, pero cada una tiene que ver únicamente lo suyo.
+  - **El hallazgo:** `sede_id` ya viajaba en el JWT y en `session.user` desde el día uno — y no se usaba en **ni una sola query**. El modelo multi-sede estaba declarado y nunca aplicado. El trabajo no fue rediseñar, fue hacerlo cumplir.
+  - **Se descartó una tabla por sucursal.** Triplicaría cada query, rompería el DNI único, obligaría a migrar tres veces y a tocar código cada vez que abren una sede. El aislamiento sale igual filtrando por `sede_id`.
+  - **`sedeId` es el primer parámetro obligatorio** de cada función de listado (`listarSocios`, `listarPersonal`, `obtenerResumen`, `listarAsistencias`, `evaluarIngresoPorDni`). Si se olvida, no compila. Es la diferencia entre "me acordé de filtrar" y "no puedo no filtrar". Al hacer el cambio, TypeScript listó solo las 9 llamadas que había que tocar.
+  - **`Pago` y `Asistencia` se sellan con su propia sede.** Antes la deducían del socio; con el traslado, eso habría movido el historial entero con la persona y reescrito la caja pasada de las dos sedes. Un pago queda contado donde se cobró, para siempre.
+  - **Desaparecen los `<select name="sede_id">`** del alta y de la edición de socio: eran campos de formulario comunes, o sea que un profe podía dar de alta —o mudar— un socio en la sucursal de al lado editando el HTML. Ahora la sede sale de la sesión y se muestra como texto fijo.
+  - **Traslado de socio.** Si el DNI ya existe en otra sede, el alta no tira un error seco: muestra nombre y sucursal para que el profe confirme que es la misma persona, y ofrece traerla. Solo **hacia** la propia sede — un profe no puede sacar a nadie del padrón ajeno.
+  - **Rol `DUENIO`.** Ve el total de la cadena en el dashboard y elige sucursal con un selector. Queda resuelta la decisión que estaba abierta sobre si hacía falta un rol separado.
+  - **La puerta** rechaza al socio de otra sede aunque tenga la cuota al día, y no le escribe asistencia.
+  - **El candado del último admin pasa a contarse por sede.** Era global: se podía dejar una sucursal sin nadie que pudiera entrar al panel porque quedaban admins en las otras.
+  - **Rutinas apagadas** con `RUTINAS_HABILITADAS=false`: el gimnasio ya las reparte con su propio QR. El código y sus tests quedan enteros; el día de la entrega se prende la variable y se muestra andando.
+  - Verificado contra la app corriendo y la base real: 10 chequeos end-to-end (el padrón no muestra al ajeno, su ficha da 404, la puerta lo rechaza, el dueño ve las tres sedes, el admin no). 90 tests, `lint` y `build` limpios.
+  - **Ojo con el seed:** ahora reasigna `sede_id` al volver a correrlo. Antes no lo hacía, así que re-sembrar no podía corregir una sede mal cargada.
 - **27/08/2026** — **Rutinas (bloque D).** El profe sube un PDF o una foto desde la ficha del socio; el socio la descarga desde `/mi-cuenta`, y solo si entró con su clave. Tres decisiones que valen más que el código:
   - **Route handler en vez de signed URL.** El plan original decía signed URL de corta duración. Se cambió: esa URL *es* la credencial, y una URL se reenvía por WhatsApp, queda en el historial y se filtra por el `Referer`. Ahora el servidor baja el archivo del bucket privado y lo pasa, después de verificar la cookie firmada. Mismo criterio que "el socio nunca viaja en la URL".
   - **Se valida por *magic bytes*, no por `Content-Type`.** El tipo que declara el navegador y la extensión del nombre los elige quien sube el archivo: un `.exe` renombrado a `.pdf` viaja con `application/pdf` sin chistar. Se mira el prefijo real del archivo (`%PDF`, `FF D8 FF`, `89 50 4E 47`, `RIFF…WEBP`). Hay un test que sube justamente ese `.exe` disfrazado.

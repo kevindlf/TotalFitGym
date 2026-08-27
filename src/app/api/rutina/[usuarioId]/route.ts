@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 
-import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { contextoDelPanel } from "@/lib/sede";
 import {
   descargarRutina,
   obtenerRutinaActual,
   respuestaConArchivo,
+  rutinasHabilitadas,
 } from "@/lib/rutinas";
 
 /**
@@ -21,13 +23,29 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ usuarioId: string }> },
 ) {
-  const sesion = await auth();
+  if (!rutinasHabilitadas()) {
+    return NextResponse.json({ error: "No encontrado." }, { status: 404 });
+  }
 
-  if (sesion?.user?.rol !== "ADMIN") {
+  const contexto = await contextoDelPanel();
+
+  if (!contexto) {
     return NextResponse.json({ error: "No autorizado." }, { status: 401 });
   }
 
   const { usuarioId } = await params;
+
+  // Regla de Oro 5: el id viene de la URL, así que hay que confirmar que ese
+  // socio sea de la sede en la que está trabajando quien pide el archivo.
+  const socio = await prisma.usuario.findFirst({
+    where: { id: usuarioId, rol: "CLIENTE", sede_id: contexto.sedeId },
+    select: { id: true },
+  });
+
+  if (!socio) {
+    return NextResponse.json({ error: "No encontrado." }, { status: 404 });
+  }
+
   const rutina = await obtenerRutinaActual(usuarioId);
 
   if (!rutina) {

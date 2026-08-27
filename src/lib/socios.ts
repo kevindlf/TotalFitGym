@@ -117,7 +117,17 @@ function conCuota(
  * simple y más barato que intentar expresar la regla en SQL, y evita que la
  * regla quede duplicada en dos lados.
  */
-export async function listarSocios(busqueda?: string): Promise<SocioConCuota[]> {
+/**
+ * El padrón de una sede.
+ *
+ * `sedeId` es obligatorio y va primero a propósito: si fuera opcional, olvidarlo
+ * devolvería en silencio los socios de toda la cadena. Así no compila. `null` es
+ * una decisión explícita —la cadena entera— y solo la toma el dueño.
+ */
+export async function listarSocios(
+  sedeId: string | null,
+  busqueda?: string,
+): Promise<SocioConCuota[]> {
   const termino = busqueda?.trim();
 
   // Los totales van en una query aparte con groupBy en vez de sumar en memoria:
@@ -127,6 +137,7 @@ export async function listarSocios(busqueda?: string): Promise<SocioConCuota[]> 
     prisma.usuario.findMany({
       where: {
         rol: "CLIENTE",
+        ...(sedeId ? { sede_id: sedeId } : {}),
         ...(termino
           ? {
               OR: [
@@ -140,8 +151,13 @@ export async function listarSocios(busqueda?: string): Promise<SocioConCuota[]> 
       select: SELECCION_SOCIO,
       orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
     }),
+    // Se acota a los socios de la sede, pero NO a los pagos hechos en ella:
+    // `totalFacturado` responde "cuánto pagó esta persona desde que es socia",
+    // que es un dato de la persona. La caja de la sede es otra pregunta y la
+    // contesta `obtenerResumen`, que sí filtra por dónde se cobró.
     prisma.pago.groupBy({
       by: ["usuario_id"],
+      ...(sedeId ? { where: { usuario: { sede_id: sedeId } } } : {}),
       _sum: { monto: true },
       _count: { _all: true },
     }),
@@ -157,9 +173,19 @@ export async function listarSocios(busqueda?: string): Promise<SocioConCuota[]> 
   return socios.map((socio) => conCuota(socio, porSocio.get(socio.id)));
 }
 
-export async function obtenerSocio(id: string) {
+/**
+ * Ficha de un socio, siempre acotada a una sede.
+ *
+ * Devuelve `null` para un socio de otra sucursal, y la page hace `notFound()`:
+ * escribir el id en la URL no alcanza para ver una ficha ajena.
+ *
+ * Ojo con lo que NO se filtra: los pagos, las asistencias y el estado de cuota
+ * son de la persona, no de la sede. Si a alguien se lo trasladó, la cuota que
+ * pagó en su sucursal anterior lo sigue cubriendo.
+ */
+export async function obtenerSocio(id: string, sedeId: string | null) {
   const socio = await prisma.usuario.findFirst({
-    where: { id, rol: "CLIENTE" },
+    where: { id, rol: "CLIENTE", ...(sedeId ? { sede_id: sedeId } : {}) },
     select: SELECCION_SOCIO,
   });
 

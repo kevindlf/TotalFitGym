@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { mensajeParaAdmin, type EstadoCuota } from "@/lib/cuota";
 import { formatearPesos } from "@/lib/formato";
-import { obtenerResumen } from "@/lib/metricas";
+import { obtenerResumen, obtenerResumenPorSede } from "@/lib/metricas";
 import type { SocioConCuota } from "@/lib/socios";
+import { exigirPanel } from "@/lib/sede";
 
 export const metadata: Metadata = { title: "Panel · Total Fit" };
 
@@ -22,13 +23,20 @@ const TARJETAS: { estado: EstadoCuota; titulo: string }[] = [
 ];
 
 export default async function PaginaDashboard() {
-  const resumen = await obtenerResumen();
+  const ctx = await exigirPanel();
+  const resumen = await obtenerResumen(ctx.sedeId);
+
+  // El dueño ve además el total de la cadena. Va abajo del resumen de la sede
+  // activa y no en vez de él: la pantalla sigue siendo la de una sucursal.
+  const cadena = ctx.esDuenio ? await obtenerResumenPorSede() : null;
 
   return (
     <div className="space-y-8">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Panel</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Panel · Sede {ctx.sedeNombre}
+          </h1>
           <p className="text-muted-foreground">
             {resumen.totalSocios} socios cargados
             {resumen.sociosInactivos > 0
@@ -49,6 +57,59 @@ export default async function PaginaDashboard() {
           </Button>
         </div>
       </header>
+
+      {/* Solo el dueño ve la cadena entera. Va debajo del resumen de la sede
+          activa y no en lugar de él: esta sigue siendo la pantalla de una
+          sucursal, y mezclar padrones es justo lo que confundiría al profe. */}
+      {cadena ? (
+        <section className="space-y-3 rounded-xl border p-4">
+          <h2 className="text-sm font-semibold tracking-tight text-muted-foreground">
+            Toda la cadena
+          </h2>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b text-left text-muted-foreground">
+                  <th className="py-1.5 pr-4 font-medium">Sede</th>
+                  <th className="py-1.5 pr-4 font-medium">Socios</th>
+                  <th className="py-1.5 pr-4 font-medium">Morosos</th>
+                  <th className="py-1.5 font-medium">Cobrado este mes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cadena.map((sede) => (
+                  <tr key={sede.id_sede} className="border-b last:border-0">
+                    <td className="py-1.5 pr-4">{sede.nombre}</td>
+                    <td className="py-1.5 pr-4 tabular-nums">{sede.socios}</td>
+                    <td className="py-1.5 pr-4 tabular-nums">{sede.morosos}</td>
+                    <td className="py-1.5 tabular-nums">
+                      {formatearPesos(sede.cobradoEsteMes)}
+                    </td>
+                  </tr>
+                ))}
+                <tr className="font-semibold">
+                  <td className="py-1.5 pr-4">Total</td>
+                  <td className="py-1.5 pr-4 tabular-nums">
+                    {cadena.reduce((suma, sede) => suma + sede.socios, 0)}
+                  </td>
+                  <td className="py-1.5 pr-4 tabular-nums">
+                    {cadena.reduce((suma, sede) => suma + sede.morosos, 0)}
+                  </td>
+                  <td className="py-1.5 tabular-nums">
+                    {formatearPesos(
+                      cadena.reduce(
+                        (suma, sede) => suma + sede.cobradoEsteMes,
+                        0,
+                      ),
+                    )}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {TARJETAS.map((tarjeta) => (

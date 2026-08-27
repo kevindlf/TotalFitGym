@@ -48,7 +48,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // al panel aunque tenga password cargada (CLAUDE.md §2).
         const puedeIntentar =
           usuario !== null &&
-          usuario.rol === "ADMIN" &&
+          (usuario.rol === "ADMIN" || usuario.rol === "DUENIO") &&
           usuario.estado === "ACTIVO" &&
           usuario.password !== null;
 

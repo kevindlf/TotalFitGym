@@ -20,12 +20,14 @@ import {
   hoyParaInput,
 } from "@/lib/formato";
 import { ETIQUETAS_TIPO_PASE } from "@/lib/pases";
+import { rutinasHabilitadas } from "@/lib/rutinas";
 import { obtenerSocio } from "@/lib/socios";
 
 import { cambiarEstadoSocio } from "../acciones";
 import { ClaveSocio } from "./clave-socio";
 import { FormularioPago } from "./formulario-pago";
 import { RutinaSocio } from "./rutina-socio";
+import { exigirPanel } from "@/lib/sede";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +44,9 @@ export default async function PaginaSocio({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const socio = await obtenerSocio(id);
+  const ctx = await exigirPanel();
+  // Acotado a la sede: escribir el id de un socio ajeno en la URL da 404.
+  const socio = await obtenerSocio(id, ctx.sedeId);
 
   if (!socio) {
     notFound();
@@ -230,20 +234,22 @@ export default async function PaginaSocio({
       </section>
 
       <section className="space-y-4 border-t pt-6">
-        <div>
-          <h2 className="text-lg font-semibold tracking-tight">Rutina</h2>
-          <div className="mt-2">
-            <RutinaSocio
-              usuarioId={socio.id}
-              nombre={socio.nombre}
-              rutina={socio.rutina}
-            />
+        {rutinasHabilitadas() ? (
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight">Rutina</h2>
+            <div className="mt-2">
+              <RutinaSocio
+                usuarioId={socio.id}
+                nombre={socio.nombre}
+                rutina={socio.rutina}
+              />
+            </div>
           </div>
-        </div>
+        ) : null}
 
         <div>
           <h2 className="text-lg font-semibold tracking-tight">
-            Clave para la rutina
+            Clave del socio
           </h2>
           <div className="mt-2">
             <ClaveSocio

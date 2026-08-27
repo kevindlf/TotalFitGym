@@ -44,6 +44,7 @@ function desde(rango: RangoDeAsistencias): Date {
 }
 
 export async function listarAsistencias(
+  sedeId: string | null,
   rango: RangoDeAsistencias,
   busqueda?: string,
 ): Promise<ResumenDeAsistencias> {
@@ -54,6 +55,9 @@ export async function listarAsistencias(
 
   const filtro = {
     fecha_hora: { gte: desde(rango), lte: hasta },
+    // Por qué puerta entró, no de qué sede es el socio: si a alguien se lo
+    // trasladó, sus ingresos viejos siguen contando en la sucursal donde pasó.
+    ...(sedeId ? { sede_id: sedeId } : {}),
     ...(termino
       ? {
           usuario: {

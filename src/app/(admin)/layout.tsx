@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 
+import { SelectorDeSede } from "@/components/admin/selector-de-sede";
 import { CerrarSesion } from "@/components/admin/cerrar-sesion";
 import { BotonTema } from "@/components/ui/boton-tema";
-import { auth } from "@/lib/auth";
+import { exigirPanel } from "@/lib/sede";
+import { listarSedes } from "@/lib/socios";
 
 /**
  * Recepción NO va acá.
@@ -26,11 +27,10 @@ export default async function LayoutAdmin({
 }) {
   // El proxy ya redirige, pero se revalida acá: la doc de Next dice que el
   // proxy no es la capa de autorización (Regla de Oro 4).
-  const sesion = await auth();
+  const ctx = await exigirPanel();
 
-  if (sesion?.user?.rol !== "ADMIN") {
-    redirect("/ingresar");
-  }
+  // Solo el dueño puede cambiar de sucursal, así que solo él necesita la lista.
+  const sedes = ctx.esDuenio ? await listarSedes() : [];
 
   return (
     <div className="flex min-h-svh flex-col">
@@ -52,9 +52,22 @@ export default async function LayoutAdmin({
             ))}
           </nav>
 
-          <div className="ml-auto flex items-center gap-3 text-sm">
+          <div className="ml-auto flex items-center gap-2 text-sm sm:gap-3">
+            {/*
+              La sede se muestra siempre y bien visible: si un profe entra y ve
+              una sucursal que no es la suya, quiere decir que lo cargaron mal.
+              Ese error aparece el primer día en vez de a los tres meses.
+            */}
+            {ctx.esDuenio ? (
+              <SelectorDeSede sedes={sedes} sedeActual={ctx.sedeId} />
+            ) : (
+              <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
+                Sede {ctx.sedeNombre}
+              </span>
+            )}
+
             <span className="hidden text-muted-foreground sm:inline">
-              {sesion.user.name}
+              {ctx.usuarioNombre}
             </span>
             <BotonTema />
             <CerrarSesion />

@@ -43,6 +43,9 @@ const ESTILOS: Record<
 
 const MENSAJES_RECHAZO: Record<MotivoRechazo, string> = {
   DNI_NO_REGISTRADO: "Ese DNI no está registrado como socio.",
+  // Se dice de qué sucursal es, y no un "no registrado", para que el profe sepa
+  // qué hacer con la persona que tiene enfrente en vez de quedar sin respuesta.
+  OTRA_SEDE: "Es socio de otra sede.",
   CUENTA_INACTIVA: "La cuenta del socio está dada de baja.",
   CUOTA_VENCIDA: "La cuota está vencida.",
 };
@@ -111,7 +114,9 @@ export function ResultadoAcceso({
 
       {resultado.motivo ? (
         <p className="text-lg font-medium">
-          {MENSAJES_RECHAZO[resultado.motivo]}
+          {resultado.motivo === "OTRA_SEDE" && resultado.sedeDelSocio
+            ? `Es socio de la sede ${resultado.sedeDelSocio}. Mandalo para allá.`
+            : MENSAJES_RECHAZO[resultado.motivo]}
         </p>
       ) : null}
 

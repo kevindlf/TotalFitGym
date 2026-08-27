@@ -1,19 +1,20 @@
 import { addDays, startOfDay } from "date-fns";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-
 import { guardarRutina } from "@/lib/rutinas";
+import { exigirPanel } from "@/lib/sede";
 
 import {
+  crearSocio,
   editarSocio,
   registrarPago,
   repetirUltimoPago,
   subirRutina,
+  trasladarSocio,
 } from "./acciones";
 
-vi.mock("@/lib/auth", () => ({ auth: vi.fn() }));
+vi.mock("@/lib/sede", () => ({ exigirPanel: vi.fn() }));
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
@@ -40,15 +41,26 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
-const sesion = vi.mocked(auth);
+const contexto = vi.mocked(exigirPanel);
 const buscarPago = vi.mocked(prisma.pago.findFirst);
 const crearPago = vi.mocked(prisma.pago.create);
 const buscarUsuario = vi.mocked(prisma.usuario.findFirst);
 const buscarPorDni = vi.mocked(prisma.usuario.findUnique);
 const actualizarUsuario = vi.mocked(prisma.usuario.update);
+const crearUsuario = vi.mocked(prisma.usuario.create);
 const subirArchivo = vi.mocked(guardarRutina);
 
-const ADMIN = { user: { id: "admin_1", rol: "ADMIN" } };
+const SEDE = "sede_san_martin";
+const OTRA_SEDE = "sede_godoy_cruz";
+
+const ADMIN = {
+  usuarioId: "admin_1",
+  usuarioNombre: "Fernando Profe",
+  rol: "ADMIN" as const,
+  esDuenio: false,
+  sedeId: SEDE,
+  sedeNombre: "San Martín",
+};
 
 function formulario(usuarioId: string) {
   const datos = new FormData();
@@ -59,7 +71,7 @@ function formulario(usuarioId: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  sesion.mockResolvedValue(ADMIN as never);
+  contexto.mockResolvedValue(ADMIN);
 });
 
 describe("repetirUltimoPago", () => {
@@ -101,7 +113,9 @@ describe("repetirUltimoPago", () => {
   });
 
   it("rechaza a quien no es admin antes de tocar la base", async () => {
-    sesion.mockResolvedValue({ user: { id: "x", rol: "CLIENTE" } } as never);
+    // `exigirPanel` corta con un redirect a quien no es personal; acá se
+    // simula como un throw para poder assertear que la acción no siguió.
+    contexto.mockRejectedValue(new Error("redirigido a /ingresar"));
 
     await expect(repetirUltimoPago({}, formulario("socio_1"))).rejects.toThrow(
       "redirigido a /ingresar",
@@ -112,7 +126,7 @@ describe("repetirUltimoPago", () => {
   });
 
   it("rechaza a quien no tiene sesión", async () => {
-    sesion.mockResolvedValue(null as never);
+    contexto.mockRejectedValue(new Error("redirigido a /ingresar"));
 
     await expect(repetirUltimoPago({}, formulario("socio_1"))).rejects.toThrow(
       "redirigido a /ingresar",
@@ -239,7 +253,9 @@ describe("editarSocio", () => {
   });
 
   it("rechaza a quien no es admin antes de tocar la base", async () => {
-    sesion.mockResolvedValue({ user: { id: "x", rol: "CLIENTE" } } as never);
+    // `exigirPanel` corta con un redirect a quien no es personal; acá se
+    // simula como un throw para poder assertear que la acción no siguió.
+    contexto.mockRejectedValue(new Error("redirigido a /ingresar"));
 
     await expect(editarSocio({}, formularioDeEdicion())).rejects.toThrow(
       "redirigido a /ingresar",
@@ -282,7 +298,9 @@ describe("subirRutina", () => {
   });
 
   it("rechaza a quien no es admin antes de tocar nada", async () => {
-    sesion.mockResolvedValue({ user: { id: "x", rol: "CLIENTE" } } as never);
+    // `exigirPanel` corta con un redirect a quien no es personal; acá se
+    // simula como un throw para poder assertear que la acción no siguió.
+    contexto.mockRejectedValue(new Error("redirigido a /ingresar"));
 
     await expect(subirRutina({}, formularioDeRutina())).rejects.toThrow(
       "redirigido a /ingresar",
@@ -318,5 +336,157 @@ describe("subirRutina", () => {
     expect(await subirRutina({}, formularioDeRutina())).toEqual({
       error: "Solo se aceptan PDF, JPG, PNG o WEBP.",
     });
+  });
+});
+
+describe("aislamiento por sede", () => {
+  function formularioDeAlta(extras?: Record<string, string>) {
+    const datos = new FormData();
+    datos.set("dni", "30123456");
+    datos.set("nombre", "Ana");
+    datos.set("apellido", "Gómez");
+
+    for (const [clave, valor] of Object.entries(extras ?? {})) {
+      datos.set(clave, valor);
+    }
+
+    return datos;
+  }
+
+  it("crearSocio ignora la sede que venga en el formulario y usa la de la sesión", async () => {
+    buscarPorDni.mockResolvedValue(null as never);
+    crearUsuario.mockResolvedValue({ id: "socio_nuevo" } as never);
+
+    // Un profe que edita el HTML e intenta dar de alta en la otra sucursal.
+    await crearSocio({}, formularioDeAlta({ sede_id: OTRA_SEDE })).catch(
+      () => {},
+    );
+
+    expect(crearUsuario.mock.calls[0]![0]!.data).toMatchObject({
+      sede_id: SEDE,
+    });
+  });
+
+  it("registrarPago no encuentra al socio de otra sede y no cobra nada", async () => {
+    // La query lleva `sede_id` en el where, así que la base no devuelve nada.
+    buscarUsuario.mockResolvedValue(null as never);
+
+    const datos = formulario("socio_de_otra_sede");
+    datos.set("monto", "45000");
+    datos.set("tipo_pase", "LIBRE");
+    datos.set("metodo_pago", "EFECTIVO");
+
+    const resultado = await registrarPago({}, datos);
+
+    expect(resultado).toEqual({ error: "Ese socio no existe." });
+    expect(crearPago).not.toHaveBeenCalled();
+
+    // Lo que hace que no lo encuentre: la sede va en el `where`.
+    expect(buscarUsuario.mock.calls[0]![0]!.where).toMatchObject({
+      sede_id: SEDE,
+    });
+  });
+
+  it("el pago queda sellado con la sede donde se cobró", async () => {
+    buscarUsuario.mockResolvedValue({ id: "socio_1" } as never);
+
+    const datos = formulario("socio_1");
+    datos.set("monto", "45000");
+    datos.set("tipo_pase", "LIBRE");
+    datos.set("metodo_pago", "EFECTIVO");
+
+    await registrarPago({}, datos);
+
+    expect(crearPago.mock.calls[0]![0].data).toMatchObject({
+      sede_id: SEDE,
+      registrado_por: "admin_1",
+    });
+  });
+
+  it("un DNI de otra sede ofrece traslado en vez de un error seco", async () => {
+    buscarPorDni.mockResolvedValue({
+      id: "socio_de_alla",
+      nombre: "Elena",
+      apellido: "Ruiz",
+      rol: "CLIENTE",
+      sede_id: OTRA_SEDE,
+      sede: { nombre: "Godoy Cruz" },
+    } as never);
+
+    const resultado = await crearSocio({}, formularioDeAlta());
+
+    expect(resultado.error).toBeUndefined();
+    expect(resultado.traslado).toMatchObject({
+      usuarioId: "socio_de_alla",
+      apellido: "Ruiz",
+      sedeNombre: "Godoy Cruz",
+    });
+    expect(crearUsuario).not.toHaveBeenCalled();
+  });
+
+  it("un DNI del personal no ofrece traslado", async () => {
+    buscarPorDni.mockResolvedValue({
+      id: "profe_1",
+      nombre: "Fernando",
+      apellido: "Profe",
+      rol: "ADMIN",
+      sede_id: OTRA_SEDE,
+      sede: { nombre: "Godoy Cruz" },
+    } as never);
+
+    const resultado = await crearSocio({}, formularioDeAlta());
+
+    expect(resultado.traslado).toBeUndefined();
+    expect(resultado.error).toContain("personal");
+  });
+
+  it("trasladarSocio lo trae a la sede propia", async () => {
+    buscarUsuario.mockResolvedValue({
+      id: "socio_de_alla",
+      nombre: "Elena",
+      apellido: "Ruiz",
+      sede_id: OTRA_SEDE,
+    } as never);
+
+    await trasladarSocio({}, formulario("socio_de_alla")).catch(() => {});
+
+    expect(actualizarUsuario.mock.calls[0]![0].data).toEqual({
+      sede_id: SEDE,
+    });
+  });
+
+  it("trasladar a alguien que ya es de la sede no hace nada", async () => {
+    buscarUsuario.mockResolvedValue({
+      id: "socio_1",
+      nombre: "Ana",
+      apellido: "Gómez",
+      sede_id: SEDE,
+    } as never);
+
+    const resultado = await trasladarSocio({}, formulario("socio_1"));
+
+    expect(resultado.error).toContain("ya es socio de esta sede");
+    expect(actualizarUsuario).not.toHaveBeenCalled();
+  });
+
+  it("editarSocio ya no puede mover a nadie de sucursal", async () => {
+    buscarUsuario.mockResolvedValue({
+      id: "socio_1",
+      dni: "30123456",
+    } as never);
+
+    const datos = formulario("socio_1");
+    datos.set("dni", "30123456");
+    datos.set("nombre", "Ana");
+    datos.set("apellido", "Gómez");
+    datos.set("sede_id", OTRA_SEDE);
+
+    await editarSocio({}, datos).catch(() => {});
+
+    // El `data` del update no incluye sede: cambiar de sucursal es un traslado,
+    // no una corrección de datos.
+    expect(actualizarUsuario.mock.calls[0]![0].data).not.toHaveProperty(
+      "sede_id",
+    );
   });
 });

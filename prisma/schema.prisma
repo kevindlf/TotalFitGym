@@ -22,7 +22,10 @@ enum EstadoSede {
   CERRADA
 }
 
+/// DUENIO ve la cadena entera y elige sobre qué sede opera. ADMIN (el dueño de
+/// una sucursal y sus profes) ve únicamente la suya. Regla de Oro 5.
 enum Rol {
+  DUENIO
   ADMIN
   CLIENTE
 }
@@ -61,7 +64,9 @@ model Sede {
   direccion String?
   estado    EstadoSede @default(ACTIVA)
 
-  usuarios Usuario[]
+  usuarios    Usuario[]
+  pagos       Pago[]
+  asistencias Asistencia[]
 }
 
 /// Un único modelo para admins y socios, diferenciados por `rol` (CLAUDE.md §3).
@@ -112,10 +117,18 @@ model Pago {
   /// Regla de Oro 4: el admin que cobró, tomado siempre de la sesión del
   /// servidor. No entra dinero anónimo.
   registrado_por String
-  creado_en      DateTime @default(now())
+
+  /// Dónde se cobró, sellado al crear el pago. NO se deduce del socio y NO
+  /// cambia nunca, ni siquiera si después el socio se traslada de sucursal: la
+  /// caja de cada sede es histórica. Si esto saliera de `usuario.sede_id`, un
+  /// traslado reescribiría la caja de los dos meses de las dos sedes.
+  sede_id String
+
+  creado_en DateTime @default(now())
 
   usuario Usuario @relation("PagosDelSocio", fields: [usuario_id], references: [id])
   admin   Usuario @relation("PagosRegistradosPorAdmin", fields: [registrado_por], references: [id])
+  sede    Sede    @relation(fields: [sede_id], references: [id_sede])
 
   // Consulta de la puerta: último vencimiento de un socio.
   @@index([usuario_id, fecha_vencimiento])
@@ -123,6 +136,8 @@ model Pago {
   @@index([fecha_vencimiento])
   @@index([registrado_por])
   @@index([fecha_pago])
+  // Caja del mes de una sede.
+  @@index([sede_id, fecha_pago])
 }
 
 /// Bitácora de ingresos. Regla de Oro 3: solo se crea y se lee, jamás se
@@ -133,10 +148,16 @@ model Asistencia {
   fecha_hora      DateTime       @default(now())
   metodo_registro MetodoRegistro @default(DNI_MANUAL)
 
+  /// Por qué puerta entró. Se sella al registrar y no cambia, igual que
+  /// `Pago.sede_id`: un ingreso ocurrió donde ocurrió.
+  sede_id String
+
   usuario Usuario @relation(fields: [usuario_id], references: [id])
+  sede    Sede    @relation(fields: [sede_id], references: [id_sede])
 
   @@index([usuario_id, fecha_hora])
   @@index([fecha_hora])
+  @@index([sede_id, fecha_hora])
 }
 
 /// Archivo de rutina (PDF o imagen) en Supabase Storage. La rutina "actual" de

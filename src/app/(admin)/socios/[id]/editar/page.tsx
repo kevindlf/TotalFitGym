@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { listarSedes, obtenerSocio } from "@/lib/socios";
+import { obtenerSocio } from "@/lib/socios";
 
 import { FormularioEditar } from "./formulario-editar";
+import { exigirPanel } from "@/lib/sede";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,8 @@ export default async function PaginaEditarSocio({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [socio, sedes] = await Promise.all([obtenerSocio(id), listarSedes()]);
+  const ctx = await exigirPanel();
+  const socio = await obtenerSocio(id, ctx.sedeId);
 
   if (!socio) {
     notFound();
@@ -32,12 +34,12 @@ export default async function PaginaEditarSocio({
           Editar a {socio.nombre} {socio.apellido}
         </h1>
         <p className="text-muted-foreground">
-          Acá no se toca la clave ni el estado de la cuenta: cada uno tiene su
-          propio botón en la ficha.
+          Acá no se toca la clave, el estado de la cuenta ni la sede: cada uno
+          tiene su propio botón en la ficha.
         </p>
       </header>
 
-      <FormularioEditar socio={socio} sedes={sedes} />
+      <FormularioEditar socio={socio} />
     </div>
   );
 }

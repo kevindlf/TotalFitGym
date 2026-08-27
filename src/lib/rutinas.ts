@@ -15,6 +15,18 @@ import { nombreDelBucket, supabase } from "./supabase";
  * el índice `[usuario_id, actualizada_en]` del schema.
  */
 
+/**
+ * Si el bloque de rutinas está prendido.
+ *
+ * Apagado por defecto: el gimnasio ya reparte las rutinas con un QR propio y no
+ * las necesita en el sistema. El código queda entero y probado, así que el día
+ * que lo quieran se prende una variable y funciona — mucho mejor que decirles
+ * que "se podría agregar".
+ */
+export function rutinasHabilitadas(): boolean {
+  return process.env.RUTINAS_HABILITADAS === "true";
+}
+
 /** 8 MB. Una rutina es un PDF de dos carillas o una foto; de más, es un error. */
 export const TAMANO_MAXIMO = 8 * 1024 * 1024;
 

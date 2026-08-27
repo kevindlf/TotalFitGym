@@ -13,6 +13,7 @@ import {
 } from "@/lib/formato";
 import { ETIQUETAS_TIPO_PASE } from "@/lib/pases";
 import { obtenerDetalleDelSocio } from "@/lib/portal";
+import { rutinasHabilitadas } from "@/lib/rutinas";
 import { cerrarSesionDelSocio, leerSesionDelSocio } from "@/lib/sesion-socio";
 
 import { CrearClave } from "./crear-clave";
@@ -126,7 +127,10 @@ export default async function PaginaMiCuenta() {
           ) : null}
         </section>
 
-        {/* ---- rutina ---- */}
+        {/* ---- rutina ----
+            Apagada mientras el gimnasio siga repartiendo las rutinas por QR.
+            Con la variable prendida vuelve entera, sin tocar código. */}
+        {rutinasHabilitadas() ? (
         <section className="rounded-xl border border-border bg-muted/50 p-5">
           <h2 className="flex items-center gap-2.5 text-lg font-semibold">
             <Dumbbell
@@ -163,6 +167,7 @@ export default async function PaginaMiCuenta() {
             </>
           )}
         </section>
+        ) : null}
 
         {/* ---- historial de pagos ---- */}
         <section className="space-y-3">

@@ -13,9 +13,15 @@ export const authConfig = {
   pages: { signIn: "/ingresar" },
   providers: [],
   callbacks: {
-    // Se ejecuta en el proxy. Solo ADMIN entra a las pantallas internas.
+    // Se ejecuta en el proxy. Al panel entran los dos roles del personal.
+    //
+    // No se importa `esRolDePanel` de `@/lib/sede`: este archivo corre en el
+    // runtime edge y ese módulo arrastra Prisma. La lista se repite acá y en
+    // ningún otro lado — el resto del sistema pasa por `exigirPanel()`.
     authorized({ auth }) {
-      return auth?.user?.rol === "ADMIN";
+      const rol = auth?.user?.rol;
+
+      return rol === "ADMIN" || rol === "DUENIO";
     },
 
     jwt({ token, user }) {

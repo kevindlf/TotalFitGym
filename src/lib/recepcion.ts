@@ -10,6 +10,7 @@ import { prisma } from "./prisma";
 
 export type MotivoRechazo =
   | "DNI_NO_REGISTRADO"
+  | "OTRA_SEDE"
   | "CUENTA_INACTIVA"
   | "CUOTA_VENCIDA";
 
@@ -20,6 +21,8 @@ export interface ResultadoIngreso {
   debePagar: boolean;
   motivo: MotivoRechazo | null;
   socio: { nombre: string; apellido: string; dni: string } | null;
+  /** Con `OTRA_SEDE`, a qué sucursal hay que mandarlo. */
+  sedeDelSocio: string | null;
   /** ISO 8601, o `null` si el socio no tiene ningún pago. */
   fechaVencimiento: string | null;
   diasRestantes: number | null;
@@ -36,6 +39,7 @@ const RECHAZO_BASE = {
   diasRestantes: null,
   diasDeGraciaRestantes: null,
   asistenciaRegistrada: false,
+  sedeDelSocio: null,
 } satisfies Omit<ResultadoIngreso, "motivo" | "socio">;
 
 /**
@@ -47,6 +51,7 @@ const RECHAZO_BASE = {
  */
 export async function evaluarIngresoPorDni(
   dni: string,
+  sedeId: string,
 ): Promise<ResultadoIngreso> {
   const usuario = await prisma.usuario.findUnique({
     where: { dni },
@@ -57,6 +62,8 @@ export async function evaluarIngresoPorDni(
       apellido: true,
       rol: true,
       estado: true,
+      sede_id: true,
+      sede: { select: { nombre: true } },
       // El vencimiento que vale es el más lejano, no el del último pago
       // cargado: si el admin registra un pago viejo después de uno nuevo, el
       // socio no tiene por qué perder la cobertura que ya pagó.
@@ -80,6 +87,19 @@ export async function evaluarIngresoPorDni(
     dni: usuario.dni,
   };
 
+  // Cada sucursal tiene su propio padrón: un socio de San Martín no entra por
+  // la puerta de Godoy Cruz. Se le dice de qué sede es en vez de un "DNI no
+  // registrado", que dejaría al profe sin saber qué hacer con la persona que
+  // tiene enfrente.
+  if (usuario.sede_id !== sedeId) {
+    return {
+      ...RECHAZO_BASE,
+      motivo: "OTRA_SEDE",
+      socio,
+      sedeDelSocio: usuario.sede.nombre,
+    };
+  }
+
   // Cuenta dada de baja: no entra aunque le quede cobertura paga.
   if (usuario.estado !== "ACTIVO") {
     return { ...RECHAZO_BASE, motivo: "CUENTA_INACTIVA", socio };
@@ -100,7 +120,11 @@ export async function evaluarIngresoPorDni(
   }
 
   await prisma.asistencia.create({
-    data: { usuario_id: usuario.id, metodo_registro: "DNI_MANUAL" },
+    data: {
+      usuario_id: usuario.id,
+      metodo_registro: "DNI_MANUAL",
+      sede_id: sedeId,
+    },
   });
 
   return {
@@ -113,5 +137,6 @@ export async function evaluarIngresoPorDni(
     diasRestantes: cuota.diasRestantes,
     diasDeGraciaRestantes: cuota.diasDeGraciaRestantes,
     asistenciaRegistrada: true,
+    sedeDelSocio: usuario.sede.nombre,
   };
 }

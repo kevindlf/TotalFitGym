@@ -4,6 +4,7 @@ import {
   descargarRutina,
   obtenerRutinaActual,
   respuestaConArchivo,
+  rutinasHabilitadas,
 } from "@/lib/rutinas";
 import { leerSesionDelSocio } from "@/lib/sesion-socio";
 
@@ -23,6 +24,12 @@ import { leerSesionDelSocio } from "@/lib/sesion-socio";
  * Toda la autorización de esta ruta es la de abajo.
  */
 export async function GET() {
+  // Con la función apagada esta ruta directamente no existe: 404, no 403. Un
+  // 403 diría "existe pero no podés", y no es el caso.
+  if (!rutinasHabilitadas()) {
+    return NextResponse.json({ error: "No encontrado." }, { status: 404 });
+  }
+
   const sesion = await leerSesionDelSocio();
 
   if (!sesion) {
