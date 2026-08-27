@@ -121,8 +121,23 @@ async function main() {
       console.log(`  Admin de ${sede.nombre}: DNI ${admin.dni}`);
     }
 
+    // Doble condición a propósito. `SEED_DATOS_DEMO` suele quedar en `true` en
+    // el .env.local de desarrollo, y el CLI lo carga de ahí aunque no esté en
+    // la terminal: apuntar el seed a la base de producción alcanzaría para
+    // meterle socios inventados. El candado real es la conexión, no la
+    // variable — los datos de prueba solo entran en una base local.
+    const esBaseLocal =
+      connectionString.includes("localhost") ||
+      connectionString.includes("127.0.0.1");
+
     if (process.env.SEED_DATOS_DEMO === "true") {
-      await sembrarSociosDemo(prisma, sedes, admins);
+      if (esBaseLocal) {
+        await sembrarSociosDemo(prisma, sedes, admins);
+      } else {
+        console.log(
+          "SEED_DATOS_DEMO está en true, pero esta base NO es local: los socios de prueba NO se cargan.",
+        );
+      }
     }
   } finally {
     await prisma.$disconnect();
