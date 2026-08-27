@@ -95,8 +95,11 @@ Sede → Usuarios · Usuario(cliente) → Pagos · Usuario(cliente) → Asistenc
 - [x] **Página pública** del gimnasio + puerta única de ingreso.
 - [x] **Portal cliente**: pantalla propia con su cuota, su plan, sus pagos y sus ingresos.
 - [x] **Claves de socio**: se las crea el propio socio verificando los últimos 4 dígitos de su teléfono.
-- [x] **Descarga de rutina** por el socio, solo con sesión `COMPLETO`.
-- [x] Carga de **rutina** por el admin (PDF/imagen a Supabase Storage, bucket privado).
+- [x] **Descarga de rutina** por el socio, solo con sesión `COMPLETO`. **Apagada** — ver abajo.
+- [x] Carga de **rutina** por el admin (PDF/imagen a Supabase Storage, bucket privado). **Apagada** — ver abajo.
+- [x] **Aislamiento por sede** (Regla de Oro 5) y rol `DUENIO`.
+
+> **Rutinas está construido y apagado.** El gimnasio ya reparte las rutinas con un QR propio, así que `RUTINAS_HABILITADAS=false` las saca de la ficha del socio, de `/mi-cuenta` y hace que sus rutas devuelvan 404. El código y sus 21 tests quedan enteros: el día que lo quieran se prende la variable. No borrarlo.
 - [ ] Script de **importación** de la planilla actual (ver sección 7).
 
 ### Fuera del MVP (fases siguientes)
