@@ -12,12 +12,8 @@
 
 export const GIMNASIO = {
   nombre: "Total Fit",
-  lema: "Entrenás vos. Del resto nos ocupamos.",
+  lema: "Entrenás vos. Del resto nos ocupamos nosotros.",
 
-  descripcion:
-    "Somos un gimnasio de barrio en Junín. Musculación, funcional y clases, " +
-    "con profesores que te arman la rutina y te siguen de cerca. Sin filas " +
-    "para usar las máquinas y sin contratos que te aten.",
 
   // REVISAR: dirección real
   direccion: "Av. Rivadavia 1234, Junín, Buenos Aires",
@@ -32,8 +28,7 @@ export const GIMNASIO = {
 
 export const HORARIOS = [
   { dias: "Lunes a viernes", horas: "7:00 a 23:00" },
-  { dias: "Sábados", horas: "9:00 a 14:00" },
-  { dias: "Domingos y feriados", horas: "Cerrado" },
+  { dias: "Sábados", horas: "9:00 a 13:00 y 17:00 a 20:00" },
 ] as const;
 
 export const ACTIVIDADES = [
@@ -43,14 +38,9 @@ export const ACTIVIDADES = [
       "Sala completa con peso libre y máquinas. Rutina armada por un profe según tu objetivo.",
   },
   {
-    titulo: "Entrenamiento funcional",
-    descripcion:
-      "Circuitos en grupos chicos, con corrección de técnica. Ideal si arrancás de cero.",
-  },
-  {
     titulo: "Acompañamiento",
     descripcion:
-      "Un profe te sigue la evolución y te ajusta la rutina cuando hace falta.",
+      "Un profe te sigue en tus ejercicios y rutina diaria.",
   },
   {
     titulo: "Rutina siempre a mano",
@@ -75,7 +65,6 @@ export const DETALLE_PLANES = {
       "Acceso sin límite de días",
       "Rutina personalizada",
       "Seguimiento de un profe",
-      "Clases de funcional incluidas",
     ],
   },
 } as const;
