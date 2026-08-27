@@ -16,6 +16,7 @@ import { obtenerDetalleDelSocio } from "@/lib/portal";
 import { cerrarSesionDelSocio, leerSesionDelSocio } from "@/lib/sesion-socio";
 
 import { CrearClave } from "./crear-clave";
+import { DescargaRutina } from "./descarga-rutina";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Mi cuenta · Total Fit" };
@@ -136,10 +137,7 @@ export default async function PaginaMiCuenta() {
           </h2>
 
           {sesion.nivel === "COMPLETO" ? (
-            <p className="mt-2 text-muted-foreground">
-              Todavía no está disponible. Cuando tu profe la cargue, la vas a
-              poder ver y descargar desde acá.
-            </p>
+            <DescargaRutina rutina={socio.rutina} />
           ) : socio.tieneClave ? (
             <>
               <p className="mt-2 text-muted-foreground">

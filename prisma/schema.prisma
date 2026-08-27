@@ -88,7 +88,8 @@ model Usuario {
   pagos             Pago[]       @relation("PagosDelSocio")
   pagos_registrados Pago[]       @relation("PagosRegistradosPorAdmin")
   asistencias       Asistencia[]
-  rutinas           Rutina[]
+  rutinas           Rutina[]     @relation("RutinasDelSocio")
+  rutinas_subidas   Rutina[]     @relation("RutinasSubidasPorAdmin")
 
   @@index([sede_id])
   @@index([apellido, nombre])
@@ -142,12 +143,24 @@ model Asistencia {
 /// un socio es la de `actualizada_en` más reciente; las anteriores quedan como
 /// histórico. Sin editor de ejercicios en v1.
 model Rutina {
-  id_rutina      String   @id @default(cuid())
-  usuario_id     String
-  archivo_url    String
+  id_rutina  String @id @default(cuid())
+  usuario_id String
+
+  /// Ruta DENTRO del bucket privado (`<usuario_id>/<cuid>.pdf`), no una URL
+  /// pública: el archivo se sirve por route handler, nunca linkeado directo.
+  archivo_url String
+  /// El nombre con el que el socio lo descarga. Nunca se usa para armar la
+  /// ruta en el bucket: un `../` en el nombre sería un escape de directorio.
+  nombre_archivo String
+
+  /// Mismo criterio que `Pago.registrado_por` (Regla de Oro 4): el profe que
+  /// cargó la rutina sale de la sesión del servidor, nunca del formulario.
+  subida_por     String
   actualizada_en DateTime @default(now()) @updatedAt
 
-  usuario Usuario @relation(fields: [usuario_id], references: [id])
+  usuario Usuario @relation("RutinasDelSocio", fields: [usuario_id], references: [id])
+  admin   Usuario @relation("RutinasSubidasPorAdmin", fields: [subida_por], references: [id])
 
   @@index([usuario_id, actualizada_en])
+  @@index([subida_por])
 }

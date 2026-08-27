@@ -3,6 +3,7 @@ import type { MetodoPago, TipoPase } from "@/generated/prisma/enums";
 
 import { calcularEstadoCuota, type ResultadoCuota } from "./cuota";
 import { prisma } from "./prisma";
+import { obtenerRutinaActual } from "./rutinas";
 
 /**
  * Consultas de socios para el panel del dueño.
@@ -187,10 +188,13 @@ export async function obtenerSocio(id: string) {
     select: { id_asistencia: true, fecha_hora: true },
   });
 
+  const rutina = await obtenerRutinaActual(id);
+
   return {
     ...conCuota(socio),
     pagos: pagos.map((pago) => ({ ...pago, monto: Number(pago.monto) })),
     asistencias,
+    rutina,
   };
 }
 

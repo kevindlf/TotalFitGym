@@ -48,8 +48,10 @@ Escala real actual (planilla): ~349 socios (216 activos, 117 vencidos, 16 próxi
 - Solo se crea y se lee. **Nunca** se edita ni se borra.
 
 ### RUTINA (archivo del socio)
-- `id_rutina` (PK), `usuario_id` (FK → Usuario), `archivo_url` (PDF o imagen en Supabase Storage), `actualizada_en`
-- El admin/profe sube el archivo; el socio lo ve en su portal. Una rutina "actual" por socio (se puede versionar guardando históricos). **No** hay editor de ejercicios estructurado en v1.
+- `id_rutina` (PK), `usuario_id` (FK → Usuario), `archivo_url` (**ruta dentro del bucket privado**, no una URL pública), `nombre_archivo`, `subida_por` (FK → Usuario admin), `actualizada_en`
+- El admin/profe sube el archivo; el socio lo ve en su portal. Cada subida crea una fila: la rutina "actual" es la de `actualizada_en` más reciente y las anteriores quedan como histórico. **No** hay editor de ejercicios estructurado en v1.
+- `subida_por` sigue el mismo criterio que `Pago.registrado_por`: sale de la sesión del servidor. Se puede responder qué profe le cargó la rutina a quién.
+- El archivo **nunca se linkea directo ni con signed URL**: se sirve por route handler, que primero verifica la sesión. Una signed URL es la credencial en sí, y una URL se reenvía por WhatsApp.
 
 ### Relaciones (1:N)
 Sede → Usuarios · Usuario(cliente) → Pagos · Usuario(cliente) → Asistencias · Usuario(cliente) → Rutina · Usuario(admin) → Pagos (como `registrado_por`)
@@ -81,8 +83,8 @@ Sede → Usuarios · Usuario(cliente) → Pagos · Usuario(cliente) → Asistenc
 - [x] **Página pública** del gimnasio + puerta única de ingreso.
 - [x] **Portal cliente**: pantalla propia con su cuota, su plan, sus pagos y sus ingresos.
 - [x] **Claves de socio**: se las crea el propio socio verificando los últimos 4 dígitos de su teléfono.
-- [ ] **Descarga de rutina** por el socio. Ya hay clave; falta el almacenamiento (Supabase Storage).
-- [ ] Carga de **rutina** por el admin (subir PDF/imagen a Supabase Storage).
+- [x] **Descarga de rutina** por el socio, solo con sesión `COMPLETO`.
+- [x] Carga de **rutina** por el admin (PDF/imagen a Supabase Storage, bucket privado).
 - [ ] Script de **importación** de la planilla actual (ver sección 7).
 
 ### Fuera del MVP (fases siguientes)

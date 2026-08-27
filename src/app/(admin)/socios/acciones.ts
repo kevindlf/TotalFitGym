@@ -10,6 +10,7 @@ import { auth } from "@/lib/auth";
 import { formatearFecha } from "@/lib/formato";
 import { calcularFechaVencimiento } from "@/lib/pases";
 import { prisma } from "@/lib/prisma";
+import { borrarRutina, guardarRutina } from "@/lib/rutinas";
 
 export type EstadoFormulario = { error?: string; ok?: string };
 
@@ -451,4 +452,86 @@ export async function cambiarEstadoSocio(
   revalidatePath(`/socios/${usuarioId}`);
   revalidatePath("/socios");
   revalidatePath("/dashboard");
+}
+
+// =============================================================================
+// Rutinas
+// =============================================================================
+
+/**
+ * Sube la rutina de un socio.
+ *
+ * El archivo se valida por su contenido en `validarArchivoDeRutina` y el profe
+ * que la sube sale de la sesión, nunca del formulario: es la Regla de Oro 4
+ * aplicada a rutinas.
+ *
+ * Cada subida deja una fila nueva; la anterior queda como histórico.
+ */
+export async function subirRutina(
+  _estadoPrevio: EstadoFormulario,
+  formData: FormData,
+): Promise<EstadoFormulario> {
+  const adminId = await exigirAdmin();
+
+  const usuarioId = formData.get("usuario_id");
+  const archivo = formData.get("archivo");
+
+  if (typeof usuarioId !== "string" || !usuarioId) {
+    return { error: "Falta el socio." };
+  }
+
+  if (!(archivo instanceof File) || archivo.size === 0) {
+    return { error: "Elegí un archivo." };
+  }
+
+  const socio = await prisma.usuario.findFirst({
+    where: { id: usuarioId, rol: "CLIENTE" },
+    select: { id: true, nombre: true },
+  });
+
+  if (!socio) {
+    return { error: "Ese socio no existe." };
+  }
+
+  const resultado = await guardarRutina({
+    usuarioId: socio.id,
+    adminId,
+    nombre: archivo.name,
+    bytes: new Uint8Array(await archivo.arrayBuffer()),
+  });
+
+  if (!resultado.ok) {
+    return { error: resultado.error };
+  }
+
+  revalidatePath(`/socios/${socio.id}`);
+  revalidatePath("/mi-cuenta");
+
+  return { ok: `Rutina de ${socio.nombre} actualizada.` };
+}
+
+/** Borra la rutina actual de un socio. El histórico anterior no se toca. */
+export async function eliminarRutina(
+  _estadoPrevio: EstadoFormulario,
+  formData: FormData,
+): Promise<EstadoFormulario> {
+  await exigirAdmin();
+
+  const idRutina = formData.get("id_rutina");
+  const usuarioId = formData.get("usuario_id");
+
+  if (typeof idRutina !== "string" || typeof usuarioId !== "string") {
+    return { error: "Datos inválidos." };
+  }
+
+  const borrada = await borrarRutina(idRutina);
+
+  if (!borrada) {
+    return { error: "Esa rutina ya no existe." };
+  }
+
+  revalidatePath(`/socios/${usuarioId}`);
+  revalidatePath("/mi-cuenta");
+
+  return { ok: "Rutina eliminada." };
 }

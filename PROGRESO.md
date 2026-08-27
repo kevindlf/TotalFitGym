@@ -23,7 +23,7 @@ La base local ya existe (`totalfit_dev` en el PostgreSQL 18 de la máquina) y `.
 
 | Falta | Bloqueado por | Quién |
 |---|---|---|
-| **Rutinas** — subir PDF y que el socio lo baje | Cuenta de Supabase | Kevin |
+| **Probar rutinas contra Supabase** — credenciales en `.env.local` + bucket `rutinas` privado | Cuenta de Supabase | Kevin |
 | **Importar los 349 socios** de la planilla | El CSV de la planilla | Kevin |
 | **Deploy** en Vercel + Supabase | Lo de arriba | Kevin |
 | **Datos reales del gimnasio** en `src/lib/gimnasio.ts` | Dirección, teléfono, Instagram, mail | Kevin |
@@ -36,7 +36,7 @@ La base local ya existe (`totalfit_dev` en el PostgreSQL 18 de la máquina) y `.
 Está todo planificado. El orden que destraba más rápido:
 
 1. **Supabase primero** — habilita rutinas *y* deploy de una.
-2. **Rutinas** (bloque D): bucket privado, subida desde la ficha del socio, descarga con signed URL de corta duración. Las claves de socio ya están hechas, que era el requisito.
+2. ~~**Rutinas** (bloque D)~~ — hecho el 27/08. Falta solo pegarle las credenciales y probarlo (ver la bitácora de ese día).
 3. **Import** (bloque E): migración con `dni_provisorio`, script con modo `--simular`, filtro "DNI pendiente" en la planilla. Los detalles de las trampas de la planilla están en `CLAUDE.md` §7.
 4. **Deploy** (bloque F): migrar a Supabase, conectar Vercel, `AUTH_SECRET` **nuevo** para producción, borrar los datos de prueba.
 
@@ -59,7 +59,7 @@ Está todo planificado. El orden que destraba más rápido:
 | Personal (`/personal`) | ✅ Alta de profes, reset de clave, baja. |
 | Modo claro / oscuro | ✅ Botón en las 4 superficies. |
 | Responsive | ✅ Tarjetas en celular, tablas en escritorio. |
-| **Rutinas** | ❌ Necesita Supabase. |
+| **Rutinas** | ✅ Código completo. Falta probarlo contra un bucket real. |
 | **Import de la planilla** | ❌ Necesita el CSV. |
 | **Deploy** | ❌ Necesita Supabase. |
 
@@ -92,7 +92,7 @@ También verificado: un socio no puede entrar al panel, una contraseña incorrec
 | `/personal` | Alta de profes/empleados, reset de contraseña, baja |
 | `/recepcion` | La puerta. Se abre desde el dashboard |
 
-Comandos: `npm run dev` · `npm test` (50) · `npm run lint` · `npm run build` · `npm run db:studio` · `npm run db:seed`
+Comandos: `npm run dev` · `npm test` (71) · `npm run lint` · `npm run build` · `npm run db:studio` · `npm run db:seed`
 
 ---
 
@@ -190,12 +190,21 @@ Las contraseñas están en `.env.local`, que está gitignoreado.
 
 - `npm audit`: 3 vulnerabilidades **high** en `deepmerge-ts`, que entra por `@prisma/config` → `prisma` (CLI). Cadena de **devDependency**, no llega al runtime. El fix automático baja a Prisma 6 (breaking). Revisar cuando Prisma publique el bump.
 - Los datos del gimnasio están en un archivo, no en la base. Si el dueño los quiere editar solo, hay que sacarlos a una tabla.
+- **`prisma migrate dev` no corre en esta máquina.** El rol `totalfit` no tiene `CREATEDB` y Prisma necesita crear una base "shadow" temporal para cada migración: falla con `P3014`. Se destraba de una vez con `ALTER ROLE totalfit CREATEDB;` desde un superusuario — el mismo trámite del script elevado con `pg_hba.conf`. Hasta entonces, cada migración se genera a mano con los tres pasos que quedaron documentados en la bitácora del 27/08.
 - Queda una rama local `respaldo-antes-de-limpiar` (nunca se sube) de la limpieza del historial. Se puede borrar: `git branch -D respaldo-antes-de-limpiar`.
 
 ---
 
 ## Bitácora
 
+- **27/08/2026** — **Rutinas (bloque D).** El profe sube un PDF o una foto desde la ficha del socio; el socio la descarga desde `/mi-cuenta`, y solo si entró con su clave. Tres decisiones que valen más que el código:
+  - **Route handler en vez de signed URL.** El plan original decía signed URL de corta duración. Se cambió: esa URL *es* la credencial, y una URL se reenvía por WhatsApp, queda en el historial y se filtra por el `Referer`. Ahora el servidor baja el archivo del bucket privado y lo pasa, después de verificar la cookie firmada. Mismo criterio que "el socio nunca viaja en la URL".
+  - **Se valida por *magic bytes*, no por `Content-Type`.** El tipo que declara el navegador y la extensión del nombre los elige quien sube el archivo: un `.exe` renombrado a `.pdf` viaja con `application/pdf` sin chistar. Se mira el prefijo real del archivo (`%PDF`, `FF D8 FF`, `89 50 4E 47`, `RIFF…WEBP`). Hay un test que sube justamente ese `.exe` disfrazado.
+  - **`subida_por` en el modelo.** Regla de Oro 4 aplicada a rutinas: queda registrado qué profe le cargó la rutina a quién, tomado de la sesión del servidor. Hay un test que manda un `subida_por` falso en el formulario y verifica que se ignora.
+  - La ruta del socio (`/api/mi-rutina`) hubo que **sacarla del matcher de `proxy.ts`**: ese matcher exigía sesión de ADMIN para todo `/api/*`, así que el socio habría recibido un redirect al login en vez de su archivo. La del admin (`/api/rutina/[usuarioId]`) sí queda cubierta, y además revalida por su cuenta.
+  - Cada subida deja una fila nueva; la anterior queda como histórico.
+  - **Lo que falta para darlo por cerrado:** `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` y `SUPABASE_STORAGE_BUCKET` en `.env.local`, y el bucket `rutinas` creado **privado** en el panel. Sin eso no se pudo probar contra el storage real. Todo lo anterior sí: 71 tests, `lint` y `build` limpios.
+  - **Migración a mano.** `prisma migrate dev` falló con `P3014` (ver Deuda técnica). La migración `20260827014719_rutina_trazabilidad` se generó con `prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --script`, se aplicó con `prisma db execute --file` y se registró con `prisma migrate resolve --applied`. `prisma migrate status` quedó consistente. Ojo: los flags cambiaron en Prisma 7, `--from-schema-datasource` ya no existe.
 - **19/08/2026** — **Guía de entrada para el compañero.** `BIENVENIDO.md` junta en un lugar el arranque, las pantallas que existen, qué falta, dónde tocar los estilos, qué no romper y el flujo con git. El README apunta ahí desde la primera línea. Publicado también como página web para pasarle el link sin que clone.
 - **19/08/2026** — **Editar socio y bitácora de ingresos.** `/socios/[id]/editar` permite corregir nombre, apellido, teléfono, email, sede y **el DNI**. Eso último destraba el import: los 349 socios entran con DNI provisorio y se corrige cuando la persona aparece por la puerta. El DNI sigue siendo único, se chequea antes de guardar. La clave y el estado se editan aparte, para que un error tipeando no deje a nadie afuera. Además `/asistencias`: filtros por hoy, 7 y 30 días, búsqueda y conteo de personas distintas. Solo lectura (Regla 3): en `src/lib/asistencias.ts` no hay ninguna función que modifique.
 - **19/08/2026** — **Claves de socio.** El socio se crea su clave verificando los **últimos 4 dígitos del teléfono** que ya tenemos: es el segundo dato que un desconocido con solo el DNI no tiene. Con 349 socios, ponerlas de a una era inviable. La sesión pasa a tener dos niveles: `BASICO` (DNI solo) ve cuota, plan, pagos e ingresos; `COMPLETO` (con clave) va a ser el único que descargue la rutina. El nivel viaja dentro de lo firmado con HMAC — verificado que una cookie con el nivel cambiado a mano se rechaza. Sin teléfono cargado no se deja crear clave.
