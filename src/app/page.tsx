@@ -61,6 +61,7 @@ export default function PaginaPublica() {
               <Button
                 render={<Link href="/ingresar" />}
                 size="lg"
+                nativeButton={false}
                 // Botón neutro y elegante (se adapta al modo claro/oscuro automáticamente)
                 className="h-12 text-base"
               >
@@ -77,6 +78,7 @@ export default function PaginaPublica() {
                 }
                 size="lg"
                 variant="outline"
+                nativeButton={false}
                 className="h-12 border-input bg-transparent text-base text-foreground hover:bg-muted transition-colors"
               >
                 Escribinos
@@ -288,6 +290,7 @@ export default function PaginaPublica() {
             <Button
               render={<Link href="/ingresar" />}
               size="lg"
+              nativeButton={false}
               // Botón neutro
               className="h-12 w-full text-base sm:w-auto"
             >

@@ -52,7 +52,7 @@ export default async function PaginaDashboard() {
 
           {/* La pantalla de la puerta se abre desde acá y no desde el menú: es
               para la PC del mostrador, no una tarea de administración. */}
-          <Button render={<Link href="/recepcion" />} variant="outline">
+          <Button render={<Link href="/recepcion" />} variant="outline" nativeButton={false}>
             Abrir pantalla de puerta
           </Button>
         </div>
