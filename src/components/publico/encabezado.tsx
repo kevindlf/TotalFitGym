@@ -65,7 +65,7 @@ export function Encabezado() {
           <BotonTema />
         </div>
 
-        <Button render={<Link href="/ingresar" />} className={`${fuenteNormal.className} font-medium`}>
+        <Button render={<Link href="/ingresar" />} className={`${fuenteNormal.className} font-medium`} nativeButton={false}>
           Ingresar
         </Button>
       </div>

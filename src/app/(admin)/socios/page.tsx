@@ -100,7 +100,7 @@ export default async function PaginaSocios({
           </p>
         </div>
 
-        <Button render={<Link href="/socios/nuevo" />}>Nuevo socio</Button>
+        <Button render={<Link href="/socios/nuevo" />} nativeButton={false}>Nuevo socio</Button>
       </header>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -115,6 +115,7 @@ export default async function PaginaSocios({
           return (
             <Button
               key={opcion.clave}
+              nativeButton={false}
               render={
                 <Link
                   href={`/socios${parametros.size ? `?${parametros}` : ""}`}
@@ -141,11 +142,11 @@ export default async function PaginaSocios({
           placeholder="Buscar por DNI, nombre o apellido"
           className="max-w-sm"
         />
-        <Button type="submit" variant="outline">
+        <Button type="submit" variant="outline" nativeButton={false}>
           Buscar
         </Button>
         {q ? (
-          <Button render={<Link href="/socios" />} variant="ghost">
+          <Button render={<Link href="/socios" />} variant="ghost" nativeButton={false}>
             Limpiar
           </Button>
         ) : null}
