@@ -1,10 +1,23 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
+import { Inter, Montserrat } from "next/font/google";
 
 import { SelectorDeSede } from "@/components/admin/selector-de-sede";
 import { CerrarSesion } from "@/components/admin/cerrar-sesion";
 import { BotonTema } from "@/components/ui/boton-tema";
 import { exigirPanel } from "@/lib/sede";
 import { listarSedes } from "@/lib/socios";
+
+const fuenteNormal = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
+const fuenteLogo = Montserrat({
+  subsets: ["latin"],
+  weight: ["900"],
+});
 
 /**
  * Recepción NO va acá.
@@ -33,26 +46,40 @@ export default async function LayoutAdmin({
   const sedes = ctx.esDuenio ? await listarSedes() : [];
 
   return (
-    <div className="flex min-h-svh flex-col">
-      <header className="border-b">
-        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 p-4">
-          <Link href="/dashboard" className="font-bold tracking-tight">
-            TOTAL <span className="text-emerald-600">FIT</span>
+    // Aplicamos la fuente normal a toda la estructura del panel de administración
+    <div className={`flex min-h-svh flex-col bg-background text-foreground ${fuenteNormal.className}`}>
+      
+      {/* Header Sticky con efecto blur (cristal) */}
+      <header className="sticky top-0 z-50 border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 p-4">
+          
+          {/* Logo unificado con la marca */}
+          <Link href="/dashboard" className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
+            <Image 
+              src="/totalfit.jpg" 
+              alt="Logo Total Fit" 
+              width={28} 
+              height={28} 
+              className="rounded-full object-cover"
+            />
+            <span className={`text-xl uppercase tracking-tighter ${fuenteLogo.className}`}>
+              TOTAL <span className="text-red-600 dark:text-red-500">FIT</span>
+            </span>
           </Link>
 
-          <nav className="flex gap-4 text-sm">
+          <nav className="flex items-center gap-5 text-sm font-medium">
             {SECCIONES.map((seccion) => (
               <Link
                 key={seccion.href}
                 href={seccion.href}
-                className="text-muted-foreground hover:text-foreground"
+                className="text-muted-foreground transition-colors hover:text-foreground"
               >
                 {seccion.texto}
               </Link>
             ))}
           </nav>
 
-          <div className="ml-auto flex items-center gap-2 text-sm sm:gap-3">
+          <div className="ml-auto flex items-center gap-3 text-sm">
             {/*
               La sede se muestra siempre y bien visible: si un profe entra y ve
               una sucursal que no es la suya, quiere decir que lo cargaron mal.
@@ -61,21 +88,27 @@ export default async function LayoutAdmin({
             {ctx.esDuenio ? (
               <SelectorDeSede sedes={sedes} sedeActual={ctx.sedeId} />
             ) : (
-              <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
+              // Insignia moderna para el staff
+              <span className="inline-flex items-center rounded-full bg-red-500/10 px-2.5 py-1 text-xs font-semibold text-red-600 dark:text-red-500 ring-1 ring-inset ring-red-500/20">
                 Sede {ctx.sedeNombre}
               </span>
             )}
 
-            <span className="hidden text-muted-foreground sm:inline">
+            <div className="hidden h-5 w-px bg-border/50 sm:block" aria-hidden="true" />
+
+            <span className="hidden font-medium text-muted-foreground sm:inline-block">
               {ctx.usuarioNombre}
             </span>
-            <BotonTema />
-            <CerrarSesion />
+            
+            <div className="flex items-center gap-1">
+              <BotonTema />
+              <CerrarSesion />
+            </div>
           </div>
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-6xl flex-1 p-4 sm:p-6">
+      <main className="mx-auto w-full max-w-6xl flex-1 p-4 sm:p-6 lg:p-8">
         {children}
       </main>
     </div>
