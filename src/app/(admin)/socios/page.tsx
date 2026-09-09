@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Users, UserPlus, Search, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +19,6 @@ import { listarSocios, type SocioConCuota } from "@/lib/socios";
 import { cn } from "@/lib/utils";
 
 import { BotonPago } from "./boton-pago";
-import { HistorialPagos } from "./historial-pagos";
 import { TarjetaSocio } from "./tarjeta-socio";
 import { exigirPanel } from "@/lib/sede";
 
@@ -26,7 +26,6 @@ export const metadata: Metadata = { title: "Socios · Total Fit" };
 
 export const dynamic = "force-dynamic";
 
-/** Filtros rápidos. Reemplazan al "filtrar columna" de la planilla. */
 const FILTROS = [
   { clave: "todos", texto: "Todos" },
   { clave: "deben", texto: "Deben pagar" },
@@ -37,19 +36,18 @@ const FILTROS = [
 
 type Filtro = (typeof FILTROS)[number]["clave"];
 
-/** Color de la fila entera: se lee de un vistazo, como la planilla pintada. */
 const COLOR_FILA: Record<EstadoCuota, string> = {
   ACTIVO: "",
-  PROXIMO_A_VENCER: "bg-amber-50 dark:bg-amber-950/30",
-  EN_PERIODO_DE_PAGO: "bg-orange-50 dark:bg-orange-950/30",
-  VENCIDO: "bg-red-50 dark:bg-red-950/30",
+  PROXIMO_A_VENCER: "bg-amber-50/50 dark:bg-amber-500/5",
+  EN_PERIODO_DE_PAGO: "bg-orange-50/50 dark:bg-orange-500/5",
+  VENCIDO: "bg-red-50/50 dark:bg-red-500/5",
 };
 
 const COLOR_ESTADO: Record<EstadoCuota, string> = {
-  ACTIVO: "bg-emerald-600 text-white",
-  PROXIMO_A_VENCER: "bg-amber-500 text-amber-950",
-  EN_PERIODO_DE_PAGO: "bg-orange-600 text-white",
-  VENCIDO: "bg-red-600 text-white",
+  ACTIVO: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 ring-emerald-500/20",
+  PROXIMO_A_VENCER: "bg-amber-500/10 text-amber-600 dark:text-amber-500 ring-amber-500/20",
+  EN_PERIODO_DE_PAGO: "bg-orange-500/10 text-orange-600 dark:text-orange-500 ring-orange-500/20",
+  VENCIDO: "bg-red-500/10 text-red-600 dark:text-red-500 ring-red-500/20",
 };
 
 function aplicarFiltro(socios: SocioConCuota[], filtro: Filtro) {
@@ -90,193 +88,233 @@ export default async function PaginaSocios({
   );
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Socios</h1>
-          <p className="text-muted-foreground">
-            {socios.length} de {todos.length} · {formatearPesos(facturadoVisible)}{" "}
-            facturado
-          </p>
+    <div className="space-y-8 pb-10">
+      
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between border-b border-border/40 pb-6">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-600 shadow-sm">
+            <Users className="size-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Socios</h1>
+            <p className="text-sm font-medium text-muted-foreground mt-1 flex items-center gap-2">
+              Mostrando {socios.length} de {todos.length}
+              <span>·</span>
+              <span className="text-emerald-600 dark:text-emerald-500">{formatearPesos(facturadoVisible)} facturado</span>
+            </p>
+          </div>
         </div>
 
-        <Button render={<Link href="/socios/nuevo" />} nativeButton={false}>Nuevo socio</Button>
+        <Button 
+          render={<Link href="/socios/nuevo" />} 
+          nativeButton={false}
+          className="rounded-xl bg-red-600 hover:bg-red-700 text-white shadow-sm gap-2"
+        >
+          <UserPlus className="size-4" />
+          Nuevo socio
+        </Button>
       </header>
 
-      <div className="flex flex-wrap items-center gap-2">
-        {FILTROS.map((opcion) => {
-          const parametros = new URLSearchParams();
+      <div className="flex flex-col gap-4 rounded-2xl border border-border/40 bg-card/20 p-4 shadow-sm xl:flex-row xl:items-center xl:justify-between">
+        
+        <div className="flex flex-wrap items-center gap-2">
+          {FILTROS.map((opcion) => {
+            const parametros = new URLSearchParams();
 
-          if (q) parametros.set("q", q);
-          if (opcion.clave !== "todos") parametros.set("filtro", opcion.clave);
+            if (q) parametros.set("q", q);
+            if (opcion.clave !== "todos") parametros.set("filtro", opcion.clave);
 
-          const cantidad = aplicarFiltro(todos, opcion.clave).length;
+            const cantidad = aplicarFiltro(todos, opcion.clave).length;
+            const esActivo = filtro === opcion.clave;
 
-          return (
-            <Button
-              key={opcion.clave}
+            return (
+              <Button
+                key={opcion.clave}
+                nativeButton={false}
+                render={
+                  <Link
+                    href={`/socios${parametros.size ? `?${parametros}` : ""}`}
+                  />
+                }
+                size="sm"
+                variant={esActivo ? "default" : "outline"}
+                className={cn(
+                  "rounded-lg transition-colors gap-1.5",
+                  esActivo 
+                    ? "bg-red-600 text-white hover:bg-red-700 shadow-sm" 
+                    : "hover:bg-muted/50 border-border/50 text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {opcion.texto}
+                <span className={cn(
+                  "tabular-nums text-[10px] px-1.5 py-0.5 rounded-md",
+                  esActivo ? "bg-white/20" : "bg-muted text-muted-foreground"
+                )}>
+                  {cantidad}
+                </span>
+              </Button>
+            );
+          })}
+        </div>
+
+        <form className="flex w-full gap-2 xl:max-w-sm">
+          {filtro !== "todos" ? (
+            <input type="hidden" name="filtro" value={filtro} />
+          ) : null}
+
+          <div className="relative flex-1">
+            <Search className="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
+            <Input
+              name="q"
+              defaultValue={q ?? ""}
+              placeholder="Buscar por DNI, nombre..."
+              className="w-full rounded-xl bg-background/50 pl-9 border-border/50 focus-visible:ring-red-500"
+            />
+          </div>
+          <Button type="submit" variant="outline" className="rounded-xl border-border/50 hover:bg-muted/50">
+            Buscar
+          </Button>
+          {q ? (
+            <Button 
+              render={<Link href="/socios" />} 
+              variant="ghost" 
+              size="icon"
               nativeButton={false}
-              render={
-                <Link
-                  href={`/socios${parametros.size ? `?${parametros}` : ""}`}
-                />
-              }
-              size="sm"
-              variant={filtro === opcion.clave ? "default" : "outline"}
+              className="rounded-xl text-muted-foreground hover:text-red-500 hover:bg-red-500/10 shrink-0"
+              title="Limpiar búsqueda"
             >
-              {opcion.texto}{" "}
-              <span className="tabular-nums opacity-70">{cantidad}</span>
+              <X className="size-4" />
             </Button>
-          );
-        })}
+          ) : null}
+        </form>
       </div>
 
-      <form className="flex gap-2">
-        {filtro !== "todos" ? (
-          <input type="hidden" name="filtro" value={filtro} />
-        ) : null}
-
-        <Input
-          name="q"
-          defaultValue={q ?? ""}
-          placeholder="Buscar por DNI, nombre o apellido"
-          className="max-w-sm"
-        />
-        <Button type="submit" variant="outline" nativeButton={false}>
-          Buscar
-        </Button>
-        {q ? (
-          <Button render={<Link href="/socios" />} variant="ghost" nativeButton={false}>
-            Limpiar
-          </Button>
-        ) : null}
-      </form>
-
       {socios.length === 0 ? (
-        <p className="rounded-lg border p-8 text-center text-muted-foreground">
-          No hay socios que coincidan.
-        </p>
+        <div className="flex h-40 flex-col items-center justify-center rounded-2xl border border-dashed border-border/50 bg-card/20 text-center">
+          <Users className="mb-2 size-8 text-muted-foreground/50" />
+          <p className="text-sm font-medium text-muted-foreground">
+            No hay socios que coincidan con la búsqueda o filtro.
+          </p>
+        </div>
       ) : (
         <>
-          {/* Celular: una tarjeta por socio. Ver abajo por qué. */}
           <ul className="space-y-3 md:hidden">
             {socios.map((socio) => (
               <TarjetaSocio key={socio.id} socio={socio} />
             ))}
           </ul>
 
-          <div className="hidden overflow-x-auto rounded-lg border md:block">
+          <div className="hidden overflow-hidden rounded-2xl border border-border/40 bg-card/40 shadow-sm md:block">
             <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Socio</TableHead>
-                <TableHead>DNI</TableHead>
-                <TableHead>Plan</TableHead>
-                <TableHead>Último pago</TableHead>
-                <TableHead className="text-right">Facturado</TableHead>
-                <TableHead>Vence</TableHead>
-                <TableHead>Estado</TableHead>
-                <TableHead>Historial</TableHead>
-                <TableHead>Cobrar</TableHead>
-              </TableRow>
-            </TableHeader>
-
-            <TableBody>
-              {socios.map((socio) => (
-                <TableRow
-                  key={socio.id}
-                  className={cn(COLOR_FILA[socio.cuota.estado])}
-                >
-                  <TableCell>
-                    <Link
-                      href={`/socios/${socio.id}`}
-                      className="font-medium hover:underline"
-                    >
-                      {socio.apellido}, {socio.nombre}
-                    </Link>
-                    {socio.estado === "INACTIVO" ? (
-                      <span className="ml-2 text-xs text-muted-foreground">
-                        (baja)
-                      </span>
-                    ) : null}
-                  </TableCell>
-
-                  <TableCell className="tabular-nums">{socio.dni}</TableCell>
-
-                  <TableCell>
-                    {socio.ultimoPago
-                      ? ETIQUETAS_TIPO_PASE[socio.ultimoPago.tipo_pase]
-                      : "—"}
-                  </TableCell>
-
-                  <TableCell className="tabular-nums">
-                    {socio.ultimoPago ? (
-                      <>
-                        {formatearPesos(socio.ultimoPago.monto)}
-                        <span className="ml-2 text-xs text-muted-foreground">
-                          {formatearFecha(socio.ultimoPago.fecha_pago)}
-                        </span>
-                      </>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-
-                  <TableCell className="text-right tabular-nums">
-                    {formatearPesos(socio.totalFacturado)}
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      {socio.cantidadDePagos}
-                    </span>
-                  </TableCell>
-
-                  <TableCell className="tabular-nums">
-                    {socio.cuota.fechaVencimiento
-                      ? formatearFecha(socio.cuota.fechaVencimiento)
-                      : "—"}
-                  </TableCell>
-
-                  <TableCell>
-                    <span
-                      className={cn(
-                        "inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap",
-                        COLOR_ESTADO[socio.cuota.estado],
-                      )}
-                    >
-                      {socio.ultimoPago === null
-                        ? "Sin pagos"
-                        : ETIQUETAS_PLANILLA[socio.cuota.estado]}
-                    </span>
-                  </TableCell>
-
-                  <TableCell className="align-top">
-                    <HistorialPagos
-                      usuarioId={socio.id}
-                      nombre={socio.nombre}
-                      cantidadDePagos={socio.cantidadDePagos}
-                    />
-                  </TableCell>
-
-                  <TableCell className="align-top">
-                    <BotonPago
-                      usuarioId={socio.id}
-                      tienePagoAnterior={socio.ultimoPago !== null}
-                      nombre={socio.nombre}
-                      montoSugerido={socio.ultimoPago?.monto}
-                      tipoPaseSugerido={socio.ultimoPago?.tipo_pase}
-                    />
-                  </TableCell>
+              <TableHeader className="bg-muted/30">
+                <TableRow className="border-border/40 hover:bg-transparent">
+                  <TableHead className="font-medium text-muted-foreground">Socio</TableHead>
+                  <TableHead className="font-medium text-muted-foreground">DNI</TableHead>
+                  <TableHead className="font-medium text-muted-foreground">Plan</TableHead>
+                  <TableHead className="font-medium text-muted-foreground">Último pago</TableHead>
+                  <TableHead className="font-medium text-muted-foreground text-right">Facturado</TableHead>
+                  <TableHead className="font-medium text-muted-foreground">Vence</TableHead>
+                  <TableHead className="font-medium text-muted-foreground">Estado</TableHead>
+                  {/* Se eliminó la columna Historial */}
+                  <TableHead className="font-medium text-muted-foreground text-center">Cobrar</TableHead>
                 </TableRow>
-              ))}
+              </TableHeader>
+
+              <TableBody className="divide-y divide-border/40">
+                {socios.map((socio) => (
+                  <TableRow
+                    key={socio.id}
+                    className={cn(
+                      "border-border/40 transition-colors hover:bg-muted/30",
+                      COLOR_FILA[socio.cuota.estado]
+                    )}
+                  >
+                    <TableCell>
+                      <Link
+                        href={`/socios/${socio.id}`}
+                        className="font-semibold text-foreground hover:text-red-500 transition-colors"
+                      >
+                        {socio.apellido}, {socio.nombre}
+                      </Link>
+                      {socio.estado === "INACTIVO" ? (
+                        <span className="ml-2 text-xs font-medium text-red-500/80 bg-red-500/10 px-1.5 py-0.5 rounded-md">
+                          Baja
+                        </span>
+                      ) : null}
+                    </TableCell>
+
+                    <TableCell className="tabular-nums font-medium text-muted-foreground">{socio.dni}</TableCell>
+
+                    <TableCell className="font-medium text-foreground">
+                      {socio.ultimoPago
+                        ? ETIQUETAS_TIPO_PASE[socio.ultimoPago.tipo_pase]
+                        : "—"}
+                    </TableCell>
+
+                    <TableCell className="tabular-nums">
+                      {socio.ultimoPago ? (
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-foreground">{formatearPesos(socio.ultimoPago.monto)}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {formatearFecha(socio.ultimoPago.fecha_pago)}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+
+                    <TableCell className="text-right tabular-nums">
+                      <div className="flex flex-col items-end">
+                        <span className="font-medium text-emerald-600 dark:text-emerald-500">
+                          {formatearPesos(socio.totalFacturado)}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {socio.cantidadDePagos} pagos
+                        </span>
+                      </div>
+                    </TableCell>
+
+                    <TableCell className="tabular-nums font-medium">
+                      {socio.cuota.fechaVencimiento
+                        ? formatearFecha(socio.cuota.fechaVencimiento)
+                        : "—"}
+                    </TableCell>
+
+                    <TableCell>
+                      <span
+                        className={cn(
+                          "inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider whitespace-nowrap ring-1 ring-inset",
+                          COLOR_ESTADO[socio.cuota.estado],
+                        )}
+                      >
+                        {socio.ultimoPago === null
+                          ? "Sin pagos"
+                          : ETIQUETAS_PLANILLA[socio.cuota.estado]}
+                      </span>
+                    </TableCell>
+
+                    
+
+                    <TableCell className="align-middle text-center">
+                      <BotonPago
+                        usuarioId={socio.id}
+                        tienePagoAnterior={socio.ultimoPago !== null}
+                        nombre={socio.nombre}
+                        montoSugerido={socio.ultimoPago?.monto}
+                        tipoPaseSugerido={socio.ultimoPago?.tipo_pase}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </div>
         </>
       )}
 
-      <p className="text-sm text-muted-foreground">
-        &quot;Pagó&quot; registra un pago nuevo repitiendo el monto, el plan y el
-        método del último. Para cambiar alguno de esos datos, entrá a la ficha
-        del socio.
+      <p className="text-sm font-medium text-muted-foreground bg-muted/40 p-4 rounded-xl border border-border/30">
+        <strong className="text-foreground font-semibold">Tip:</strong> El botón &quot;Pagó&quot; (en la tabla) registra un pago rápido copiando el plan, método y monto del último registro. Para editar esos datos o ver el historial completo, ingresá al perfil del socio.
       </p>
     </div>
   );

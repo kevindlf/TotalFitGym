@@ -1,11 +1,22 @@
 "use client";
 
 import { useActionState, useState } from "react";
+// Sumamos íconos para darle calidad al formulario compacto
+import { 
+  Check, 
+  DollarSign, 
+  Ticket, 
+  Wallet, 
+  AlertCircle, 
+  CheckCircle2, 
+  Loader2 
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DIAS_POR_PASE, ETIQUETAS_TIPO_PASE } from "@/lib/pases";
+import { cn } from "@/lib/utils";
 
 import {
   registrarPago,
@@ -23,20 +34,8 @@ const METODOS = [
 ];
 
 const CLASE_SELECT =
-  "h-9 w-full rounded-lg border border-input bg-transparent px-2 text-sm";
+  "flex h-9 w-full rounded-lg border border-border/50 bg-background/50 pl-8 pr-3 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-red-500 transition-all";
 
-/**
- * Cobrar desde la planilla, sin salir de la pantalla.
- *
- * Dos caminos según el socio:
- *
- * - Si ya pagó alguna vez, "Pagó" repite el último pago en un click. Es el caso
- *   normal, mes a mes, y es lo que reemplaza al "poner OK en la planilla".
- * - Si nunca pagó — recién dado de alta — no hay de dónde copiar, así que
- *   aparece un formulario corto para cargar el primero acá mismo.
- *
- * En los dos casos la fecha es hoy y el vencimiento lo calcula el servidor.
- */
 export function BotonPago({
   usuarioId,
   tienePagoAnterior,
@@ -64,79 +63,96 @@ export function BotonPago({
 
   if (abierto) {
     return (
-      <form action={accionNueva} className="w-56 space-y-2">
+      <form action={accionNueva} className="w-56 space-y-3 rounded-xl border border-border/40 bg-card/60 p-3 shadow-sm backdrop-blur-sm">
         <input type="hidden" name="usuario_id" value={usuarioId} />
 
-        <div className="space-y-1">
-          <Label htmlFor={`monto-${usuarioId}`} className="text-xs">
-            Monto que pagó {nombre}
+        <div className="space-y-1.5">
+          <Label htmlFor={`monto-${usuarioId}`} className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Monto a cobrar
           </Label>
-          <Input
-            id={`monto-${usuarioId}`}
-            name="monto"
-            type="number"
-            min="1"
-            step="any"
-            required
-            autoFocus
-            defaultValue={montoSugerido}
-            placeholder="45000"
-            className="h-9"
-          />
+          <div className="relative">
+            <DollarSign className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              id={`monto-${usuarioId}`}
+              name="monto"
+              type="number"
+              min="1"
+              step="any"
+              required
+              autoFocus
+              defaultValue={montoSugerido}
+              placeholder="45000"
+              className="h-9 rounded-lg bg-background/50 pl-8 text-xs font-medium tabular-nums border-border/50 focus-visible:ring-1 focus-visible:ring-red-500"
+            />
+          </div>
         </div>
 
-        <select
-          name="tipo_pase"
-          required
-          defaultValue={tipoPaseSugerido ?? "LIBRE"}
-          aria-label="Tipo de pase"
-          className={CLASE_SELECT}
-        >
-          {Object.entries(ETIQUETAS_TIPO_PASE).map(([valor, texto]) => (
-            <option key={valor} value={valor}>
-              {texto} ({DIAS_POR_PASE[valor as keyof typeof DIAS_POR_PASE]} días)
-            </option>
-          ))}
-        </select>
+        <div className="relative">
+          <Ticket className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <select
+            name="tipo_pase"
+            required
+            defaultValue={tipoPaseSugerido ?? "LIBRE"}
+            aria-label="Tipo de pase"
+            className={CLASE_SELECT}
+          >
+            {Object.entries(ETIQUETAS_TIPO_PASE).map(([valor, texto]) => (
+              <option key={valor} value={valor} className="bg-zinc-950 text-white dark:bg-zinc-900 text-sm">
+                {texto} ({DIAS_POR_PASE[valor as keyof typeof DIAS_POR_PASE]}d)
+              </option>
+            ))}
+          </select>
+        </div>
 
-        <select
-          name="metodo_pago"
-          required
-          defaultValue="EFECTIVO"
-          aria-label="Método de pago"
-          className={CLASE_SELECT}
-        >
-          {METODOS.map((metodo) => (
-            <option key={metodo.valor} value={metodo.valor}>
-              {metodo.texto}
-            </option>
-          ))}
-        </select>
+        <div className="relative">
+          <Wallet className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+          <select
+            name="metodo_pago"
+            required
+            defaultValue="EFECTIVO"
+            aria-label="Método de pago"
+            className={CLASE_SELECT}
+          >
+            {METODOS.map((metodo) => (
+              <option key={metodo.valor} value={metodo.valor} className="bg-zinc-950 text-white dark:bg-zinc-900 text-sm">
+                {metodo.texto}
+              </option>
+            ))}
+          </select>
+        </div>
 
         {estadoNuevo.error ? (
-          <p role="alert" className="text-xs text-destructive">
-            {estadoNuevo.error}
-          </p>
+          <div role="alert" className="flex items-start gap-1.5 rounded-md bg-red-500/10 p-2 text-red-500 border border-red-500/20">
+            <AlertCircle className="size-3.5 shrink-0 mt-0.5" />
+            <p className="text-[11px] font-medium leading-tight">{estadoNuevo.error}</p>
+          </div>
         ) : null}
 
         {estadoNuevo.ok ? (
-          <p
-            role="status"
-            className="text-xs text-emerald-700 dark:text-emerald-400"
-          >
-            {estadoNuevo.ok}
-          </p>
+          <div role="status" className="flex items-start gap-1.5 rounded-md bg-emerald-500/10 p-2 text-emerald-500 border border-emerald-500/20">
+            <CheckCircle2 className="size-3.5 shrink-0 mt-0.5" />
+            <p className="text-[11px] font-medium leading-tight">{estadoNuevo.ok}</p>
+          </div>
         ) : null}
 
-        <div className="flex gap-1.5">
-          <Button type="submit" size="sm" disabled={guardando}>
-            {guardando ? "Guardando…" : "Cobrar"}
+        <div className="flex gap-2 pt-1">
+          <Button 
+            type="submit" 
+            size="sm" 
+            disabled={guardando}
+            className={cn(
+              "flex-1 h-8 rounded-lg text-xs transition-colors",
+              guardando ? "" : "bg-red-600 hover:bg-red-700 text-white"
+            )}
+          >
+            {guardando ? <Loader2 className="size-3.5 animate-spin" /> : "Cobrar"}
           </Button>
           <Button
             type="button"
             size="sm"
             variant="ghost"
             onClick={() => setAbierto(false)}
+            className="flex-1 h-8 rounded-lg text-xs hover:bg-muted/50"
           >
             Cancelar
           </Button>
@@ -146,10 +162,10 @@ export function BotonPago({
   }
 
   return (
-    <div className="space-y-1">
-      <div className="flex flex-wrap items-center gap-1.5">
+    <div className="flex flex-col items-center gap-1.5">
+      <div className="flex w-full flex-wrap items-center justify-center gap-2">
         {tienePagoAnterior ? (
-          <form action={accionRepetir}>
+          <form action={accionRepetir} className="flex-1 min-w-0">
             <input type="hidden" name="usuario_id" value={usuarioId} />
             <Button
               type="submit"
@@ -157,8 +173,16 @@ export function BotonPago({
               variant="outline"
               disabled={repitiendo}
               aria-label={`Registrar que ${nombre} volvió a pagar lo mismo que la última vez`}
+              className="w-full h-9 rounded-xl border-border/50 hover:bg-muted/50 gap-1.5 px-2"
             >
-              {repitiendo ? "Guardando…" : "Pagó"}
+              {repitiendo ? (
+                <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
+              ) : (
+                <>
+                  <Check className="size-3.5 text-emerald-500" />
+                  <span className="truncate">Pagó</span>
+                </>
+              )}
             </Button>
           </form>
         ) : null}
@@ -166,24 +190,25 @@ export function BotonPago({
         <Button
           type="button"
           size="sm"
-          variant={tienePagoAnterior ? "ghost" : "outline"}
+          variant={tienePagoAnterior ? "ghost" : "default"}
           onClick={() => setAbierto(true)}
+          className={cn(
+            "h-9 rounded-xl px-3 flex-1 min-w-0 truncate transition-colors",
+            !tienePagoAnterior && "bg-red-600 hover:bg-red-700 text-white"
+          )}
         >
-          {tienePagoAnterior ? "Otro monto" : "Cobrar"}
+          {tienePagoAnterior ? "Modificar" : "Cobrar nuevo"}
         </Button>
       </div>
 
       {estadoRepetir.error ? (
-        <p role="alert" className="max-w-52 text-xs text-destructive">
+        <p role="alert" className="max-w-[200px] text-[11px] font-medium text-red-500 text-center leading-tight">
           {estadoRepetir.error}
         </p>
       ) : null}
 
       {estadoRepetir.ok ? (
-        <p
-          role="status"
-          className="max-w-52 text-xs text-emerald-700 dark:text-emerald-400"
-        >
+        <p role="status" className="max-w-[200px] text-[11px] font-medium text-emerald-600 dark:text-emerald-500 text-center leading-tight">
           {estadoRepetir.ok}
         </p>
       ) : null}
