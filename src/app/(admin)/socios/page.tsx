@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Users, UserPlus, Search, X } from "lucide-react";
+// Agregamos ChevronLeft y ChevronRight para los botones de la paginación
+import { Users, UserPlus, Search, X, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,8 @@ import { exigirPanel } from "@/lib/sede";
 export const metadata: Metadata = { title: "Socios · Total Fit" };
 
 export const dynamic = "force-dynamic";
+
+const ELEMENTOS_POR_PAGINA = 15;
 
 const FILTROS = [
   { clave: "todos", texto: "Todos" },
@@ -70,9 +73,9 @@ function aplicarFiltro(socios: SocioConCuota[], filtro: Filtro) {
 export default async function PaginaSocios({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; filtro?: string }>;
+  searchParams: Promise<{ q?: string; filtro?: string; page?: string }>;
 }) {
-  const { q, filtro: filtroCrudo } = await searchParams;
+  const { q, filtro: filtroCrudo, page: pageCruda } = await searchParams;
 
   const filtro: Filtro = FILTROS.some((f) => f.clave === filtroCrudo)
     ? (filtroCrudo as Filtro)
@@ -80,12 +83,30 @@ export default async function PaginaSocios({
 
   const ctx = await exigirPanel();
   const todos = await listarSocios(ctx.sedeId, q);
-  const socios = aplicarFiltro(todos, filtro);
+  const sociosFiltrados = aplicarFiltro(todos, filtro);
 
-  const facturadoVisible = socios.reduce(
+  // Lógica de Paginación
+  const paginaActual = pageCruda ? Math.max(1, parseInt(pageCruda, 10)) : 1;
+  const totalPaginas = Math.ceil(sociosFiltrados.length / ELEMENTOS_POR_PAGINA) || 1;
+  
+  // Evitar que el usuario ponga ?page=999 y rompa la vista
+  const paginaSegura = Math.min(paginaActual, totalPaginas);
+  
+  const indiceInicio = (paginaSegura - 1) * ELEMENTOS_POR_PAGINA;
+  const indiceFin = indiceInicio + ELEMENTOS_POR_PAGINA;
+  const sociosPaginados = sociosFiltrados.slice(indiceInicio, indiceFin);
+
+  const facturadoVisible = sociosFiltrados.reduce(
     (total, socio) => total + socio.totalFacturado,
     0,
   );
+  const crearUrlPagina = (nuevaPagina: number) => {
+    const params = new URLSearchParams();
+    if (q) params.set("q", q);
+    if (filtro !== "todos") params.set("filtro", filtro);
+    if (nuevaPagina > 1) params.set("page", nuevaPagina.toString());
+    return `/socios${params.size ? `?${params.toString()}` : ""}`;
+  };
 
   return (
     <div className="space-y-8 pb-10">
@@ -98,7 +119,7 @@ export default async function PaginaSocios({
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-foreground">Socios</h1>
             <p className="text-sm font-medium text-muted-foreground mt-1 flex items-center gap-2">
-              Mostrando {socios.length} de {todos.length}
+              Mostrando {sociosFiltrados.length} de {todos.length}
               <span>·</span>
               <span className="text-emerald-600 dark:text-emerald-500">{formatearPesos(facturadoVisible)} facturado</span>
             </p>
@@ -189,7 +210,7 @@ export default async function PaginaSocios({
         </form>
       </div>
 
-      {socios.length === 0 ? (
+      {sociosFiltrados.length === 0 ? (
         <div className="flex h-40 flex-col items-center justify-center rounded-2xl border border-dashed border-border/50 bg-card/20 text-center">
           <Users className="mb-2 size-8 text-muted-foreground/50" />
           <p className="text-sm font-medium text-muted-foreground">
@@ -199,7 +220,7 @@ export default async function PaginaSocios({
       ) : (
         <>
           <ul className="space-y-3 md:hidden">
-            {socios.map((socio) => (
+            {sociosPaginados.map((socio) => (
               <TarjetaSocio key={socio.id} socio={socio} />
             ))}
           </ul>
@@ -215,13 +236,12 @@ export default async function PaginaSocios({
                   <TableHead className="font-medium text-muted-foreground text-right">Facturado</TableHead>
                   <TableHead className="font-medium text-muted-foreground">Vence</TableHead>
                   <TableHead className="font-medium text-muted-foreground">Estado</TableHead>
-                  {/* Se eliminó la columna Historial */}
                   <TableHead className="font-medium text-muted-foreground text-center">Cobrar</TableHead>
                 </TableRow>
               </TableHeader>
 
               <TableBody className="divide-y divide-border/40">
-                {socios.map((socio) => (
+                {sociosPaginados.map((socio) => (
                   <TableRow
                     key={socio.id}
                     className={cn(
@@ -294,8 +314,6 @@ export default async function PaginaSocios({
                       </span>
                     </TableCell>
 
-                    
-
                     <TableCell className="align-middle text-center">
                       <BotonPago
                         usuarioId={socio.id}
@@ -309,7 +327,78 @@ export default async function PaginaSocios({
                 ))}
               </TableBody>
             </Table>
+            
+            {/* Controles de Paginación */}
+            {totalPaginas > 1 && (
+              <div className="flex items-center justify-between border-t border-border/40 bg-muted/10 px-4 py-3">
+                <p className="text-sm text-muted-foreground">
+                  Página <span className="font-semibold text-foreground">{paginaSegura}</span> de <span className="font-semibold text-foreground">{totalPaginas}</span>
+                </p>
+                <div className="flex items-center gap-2">
+                  {paginaSegura > 1 ? (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      nativeButton={false} 
+                      render={<Link href={crearUrlPagina(paginaSegura - 1)} />}
+                      className="rounded-lg hover:bg-muted/50"
+                    >
+                      <ChevronLeft className="mr-1 size-4" /> Anterior
+                    </Button>
+                  ) : (
+                    <Button variant="outline" size="sm" disabled className="rounded-lg">
+                      <ChevronLeft className="mr-1 size-4" /> Anterior
+                    </Button>
+                  )}
+
+                  {paginaSegura < totalPaginas ? (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      nativeButton={false} 
+                      render={<Link href={crearUrlPagina(paginaSegura + 1)} />}
+                      className="rounded-lg hover:bg-muted/50"
+                    >
+                      Siguiente <ChevronRight className="ml-1 size-4" />
+                    </Button>
+                  ) : (
+                    <Button variant="outline" size="sm" disabled className="rounded-lg">
+                      Siguiente <ChevronRight className="ml-1 size-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
+          
+          {/* Controles de Paginación para Celular (aparece solo si hay más de 1 pág y en móvil) */}
+          {totalPaginas > 1 && (
+            <div className="flex items-center justify-between rounded-xl border border-border/40 bg-card/40 p-4 shadow-sm md:hidden mt-4">
+              <Button 
+                variant="outline" 
+                size="icon"
+                disabled={paginaSegura === 1}
+                nativeButton={paginaSegura === 1}
+                render={paginaSegura > 1 ? <Link href={crearUrlPagina(paginaSegura - 1)} /> : undefined}
+                className="rounded-lg h-9 w-9"
+              >
+                <ChevronLeft className="size-4" />
+              </Button>
+              <p className="text-sm text-muted-foreground font-medium">
+                Pág. {paginaSegura} de {totalPaginas}
+              </p>
+              <Button 
+                variant="outline" 
+                size="icon"
+                disabled={paginaSegura === totalPaginas}
+                nativeButton={paginaSegura === totalPaginas}
+                render={paginaSegura < totalPaginas ? <Link href={crearUrlPagina(paginaSegura + 1)} /> : undefined}
+                className="rounded-lg h-9 w-9"
+              >
+                <ChevronRight className="size-4" />
+              </Button>
+            </div>
+          )}
         </>
       )}
 
