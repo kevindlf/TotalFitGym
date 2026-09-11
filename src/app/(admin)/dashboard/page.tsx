@@ -95,7 +95,7 @@ export default async function PaginaDashboard() {
                 <tr className="border-b border-border/40 text-xs uppercase tracking-wider text-muted-foreground">
                   <th className="px-5 py-4 font-medium">Sucursal</th>
                   <th className="px-5 py-4 font-medium">Activos</th>
-                  <th className="px-5 py-4 font-medium">Morosos</th>
+                  <th className="px-5 py-4 font-medium">Vencidos</th>
                   <th className="px-5 py-4 font-medium text-right">Ingresos del mes</th>
                 </tr>
               </thead>
