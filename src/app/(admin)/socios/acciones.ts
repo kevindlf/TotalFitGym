@@ -239,7 +239,7 @@ export async function registrarPago(
   revalidatePath("/dashboard");
 
   return {
-    ok: `Pago registrado.`,
+    ok: `Pago registrado. La cuota vence el ${formatearFecha(fechaVencimiento)}.`,
   };
 }
 
