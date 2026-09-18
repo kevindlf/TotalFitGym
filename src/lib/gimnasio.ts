@@ -16,14 +16,14 @@ export const GIMNASIO = {
 
 
   // REVISAR: dirección real
-  direccion: "Av. Rivadavia 1234, Junín, Buenos Aires",
-  ciudad: "Junín, Buenos Aires",
+  //direccion: "Av. Rivadavia 1234, Junín, Buenos Aires",
+  //ciudad: "Junín, Buenos Aires",
 
   // REVISAR: teléfono y redes reales
-  telefono: "+54 9 236 400-0000",
-  whatsapp: "5492364000000",
+  
+  whatsapp: "2604822873",
   instagram: "totalfit.junin",
-  email: "hola@totalfit.com.ar",
+  email: "totalfitgym118@gmail.com",
 } as const;
 
 export const HORARIOS = [
@@ -35,12 +35,12 @@ export const ACTIVIDADES = [
   {
     titulo: "Musculación",
     descripcion:
-      "Sala completa con peso libre y máquinas. Rutina armada por un profe según tu objetivo.",
+      "Tenemos más de 60 máquinas importadas y equipamiento de calidad, para que entrenes de verdad, alcances tus objetivos y disfrutes cada proceso.",
   },
   {
     titulo: "Acompañamiento",
     descripcion:
-      "Un profe te sigue en tus ejercicios y rutina diaria.",
+      "Contamos con instructores capacitados que te acompañan en cada etapa de tu entrenamiento.",
   },
   {
     titulo: "Rutina siempre a mano",

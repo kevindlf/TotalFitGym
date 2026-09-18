@@ -25,16 +25,18 @@ const SEDES = [
     id: "Junin",
     nombre: "Total Fit Junín",
     direccion: "(Centro comercial: La recova)",
+    urlMapa: "https://www.google.com/maps/search/?api=1&query=Total+Fit+Junín+Centro+comercial+La+recova",
     foto: "/sedeJunin.jpg.jpeg",
-    telefono: "+54 11 4567-8901",
+    telefono: "+54 9 2604822873",
     instagram: "total_fit__",
   },
   {
     id: "San Martin",
     nombre: "Total Fit San Martín",
-    direccion: "(Av. Lavalle 565) ",
+    direccion: "(Av. Lavalle 565)",
+    urlMapa: "https://www.google.com/maps/search/?api=1&query=Total+Fit+San+Martín+Av+Lavalle+565",
     foto: "/sedeSanMartin.jpg.jpeg",
-    telefono: "+54 11 4567-8902",
+    telefono: "+54 9 2604822873",
     instagram: "total_fit__",
   },
 ] as const;
@@ -51,9 +53,9 @@ export default function PaginaPublica() {
         <section className="mx-auto grid w-full max-w-5xl items-center gap-8 px-4 py-12 sm:px-6 sm:py-16 md:grid-cols-2 md:gap-12">
           <div className="space-y-6">
             <h1 className="text-4xl font-bold tracking-tight text-balance sm:text-5xl">
-              Entrenás vos.{" "}
+              Total Fit: {" "}
               {/* Texto en gris sutil en lugar de rojo */}
-              <span className="text-muted-foreground">Del resto nos ocupamos nosotros.</span>
+              <span className="text-muted-foreground">un espacio para entrenar, superarte y sentirte parte de una comunidad.</span>
             </h1>
 
 
@@ -102,11 +104,10 @@ export default function PaginaPublica() {
           <div className="mx-auto w-full max-w-5xl space-y-8 px-4 py-12 sm:px-6 sm:py-16">
             <div className="space-y-3">
               <h2 className="text-3xl font-bold tracking-tight">
-                Qué vas a encontrar
+                ¿Qué vas a encontrar?
               </h2>
               <p className="max-w-2xl text-pretty text-muted-foreground">
-                No somos una cadena. Somos un gimnasio de barrio donde el profe
-                se sabe tu nombre y sabe en qué estás trabajando.
+                Más que un gimnasio, somos una comunidad que te impulsa a superarte.
               </p>
             </div>
 
@@ -237,10 +238,21 @@ export default function PaginaPublica() {
                       <h3 className="text-xl font-bold text-foreground">
                         {sede.nombre}
                       </h3>
-                      <p className="text-muted-foreground flex items-center gap-2">
+                     {/* Dirección con link al mapa */}
+                     <a 
+                        href={sede.urlMapa} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-foreground font-medium underline underline-offset-4 decoration-muted-foreground/40 hover:text-red-500 hover:decoration-red-500 flex items-center gap-2 transition-all w-fit"
+                      >
                         <MapPin className="size-4 shrink-0 text-red-500" />
-                        {sede.direccion}
-                      </p>
+                        <span>
+                          {sede.direccion} 
+                          <span className="text-muted-foreground font-normal text-sm ml-1.5">
+                            (Ver en mapa)
+                          </span>
+                        </span>
+                      </a>
                     </div>
 
                     <div className="pt-4 border-t border-border flex items-center justify-between">
@@ -263,7 +275,6 @@ export default function PaginaPublica() {
                             href={`https://instagram.com/${sede.instagram}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            // Le agregué hover:text-red-500 y hover:underline para que sea súper obvio que se puede hacer clic
                             className="text-muted-foreground hover:text-red-500 hover:underline flex items-center gap-2 transition-all"
                           >
                             <AtSign className="size-4 shrink-0 text-red-500" />
@@ -302,9 +313,7 @@ export default function PaginaPublica() {
 
       <footer className="border-t border-border">
         <div className="mx-auto flex w-full max-w-5xl flex-col gap-3 px-4 py-6 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <span>
-            {GIMNASIO.nombre} · {GIMNASIO.ciudad}
-          </span>
+         
           
         </div>
       </footer>
