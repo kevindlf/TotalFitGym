@@ -6,20 +6,22 @@
 
 # ▶ EMPEZÁ ACÁ
 
-**Última sesión: 27/08/2026.** El MVP está completo y **la base de producción ya existe en Supabase**. 28 commits en `github.com/kevindlf/TotalFitGym`, 90 tests, `lint` y `build` limpios.
+**Última sesión: 18/09/2026.** El MVP está completo, **la base de producción ya existe en Supabase** y **todo está mergeado en `main`**: los PRs que estaban abiertos entraron, y el compañero sumó del 02 al 18 de septiembre catorce commits de estilos, paginación y datos reales del gimnasio. 90 tests, `lint` y `build` limpios.
 
 ### Lo que está pasando ahora mismo
 
-Hay **dos Pull Requests abiertos y sin mergear**. Ese es el estado del que hay que partir:
+Ya no hay nada bloqueado por revisión. **Lo único que falta para que el gimnasio lo use es el deploy y los datos reales.**
 
-| Rama | Qué trae | Quién |
-|---|---|---|
-| `feature/02` | Landing, encabezado, fotos, datos del gimnasio | El compañero |
-| `feature/03` | **Aislamiento por sede + rol DUENIO + rutinas** (2 commits) | Kevin |
+El estado del que hay que partir:
 
-`feature/03` salió desde `feat/rutinas`, así que **la contiene**. Cuando se mergee 03, el PR de `feat/rutinas` se cierra sin mergear — su commit ya entró.
+| Qué | Estado |
+|---|---|
+| `main` | Al día, con lo de Kevin y lo del compañero juntos |
+| Base de producción | Migrada y sembrada, **con cero socios** |
+| Deploy en Vercel | **No hecho todavía** |
+| Región de las funciones | Fijada en `gru1` (São Paulo) con `vercel.json` |
 
-**Nada se puede deployar hasta que esos dos PRs estén en `main`.** Vercel despliega `main`, y `main` todavía tiene el código viejo: sin sedes, sin rol `DUENIO`. La base de Supabase, en cambio, ya tiene el schema nuevo. Deployar así rompe de forma confusa — la cuenta de dueño no podría entrar y registrar un pago fallaría por `Pago.sede_id NOT NULL`.
+**Las dos sucursales reales son San Martín y Junín, las dos en Mendoza.** Ojo: la base de producción quedó sembrada con **tres** (`SEED_SEDES` = San Martín, Ciudad, Godoy Cruz) y hay que sacar la que sobra, verificando antes que no tenga socios ni pagos colgando.
 
 ### Lo primero: levantarlo
 
@@ -38,11 +40,13 @@ Los DNI de local **espejan los de producción a propósito**, pero las claves so
 
 | Falta | Bloqueado por | Quién |
 |---|---|---|
-| **Mergear los dos PRs** | Revisión del compañero | Los dos |
-| **Deploy en Vercel** | Lo de arriba | Kevin |
+| **Deploy en Vercel** | Nada. Es el próximo paso | Kevin |
 | **Importar los 349 socios** | El CSV de la planilla | Kevin |
-| **Datos reales del gimnasio** en `src/lib/gimnasio.ts` | Dirección de cada sede, teléfono, Instagram, mail | Kevin |
-| **Claves individuales** para los 3 admins | Que esté desplegado | Kevin |
+| **Dirección de cada sede** en `src/lib/gimnasio.ts` | Que Kevin las pase | Kevin |
+| **Sacar la tercera sede** de producción | Verificar que no tenga datos colgando | Kevin |
+| **Claves individuales** para los admins | Que esté desplegado | Kevin |
+
+El compañero ya cargó el WhatsApp, el mail y el Instagram reales; lo que queda sin datos es la dirección de cada sucursal, que él dejó comentada.
 
 ### Producción: qué hay hoy en Supabase
 
@@ -229,6 +233,15 @@ Las contraseñas están en `.env.local`, que está gitignoreado.
 ---
 
 ## Bitácora
+
+- **18/09/2026** — **Al día con el compañero, e infraestructura decidida.** Se trajeron los 14 commits suyos (PRs #3 a #9): estilos de todo el panel, paginación en la planilla de socios, componentes partidos en archivos propios y los datos reales del gimnasio en `gimnasio.ts`.
+  - **Una regresión encontrada por un test.** Su commit `ef1f06a` dejó el mensaje del cobro en `"Pago registrado."` a secas, sin la fecha de vencimiento. `main` venía con la suite en 89/90. Se devolvió la fecha: el profe cobra parado en el mostrador y necesita leer hasta cuándo quedó cubierto el socio para decírselo ahí mismo, no entrar a la ficha a averiguar lo que acaba de hacer.
+  - **La región de Vercel, fijada en `gru1`** con un `vercel.json` de tres líneas. La base está en São Paulo y sin eso las funciones se despliegan en Estados Unidos: cada consulta cruza el continente dos veces (~120 ms) y una pantalla hace varias. Desde Mendoza a São Paulo son ~30 ms. Se nota sobre todo en la puerta, que se usa con gente esperando.
+  - **Las sucursales son dos: San Martín y Junín, Mendoza.** Queda la deuda de que producción tiene tres sembradas.
+  - **No se migra a Hetzner.** Se hizo el número: 300 activos son ~170 consultas de puerta por día, con pico de ~25 por hora, y menos de 100 MB de base a cinco años. Vercel y Supabase sobran por dos órdenes de magnitud; el problema no es la carga. Hetzner además no tiene región en Sudamérica (Alemania ~230 ms, Virginia ~120 ms), así que sería más lento que hoy, y suma operación manual —backups, actualizaciones, certificados— que la paga uno con su tiempo un viernes a las 19h.
+  - **Qué se paga y cuándo.** Supabase Pro (USD 25) **el día que entren los 349 socios reales**, por los backups diarios: sin eso una pérdida de datos es irreversible. Vercel Pro (USD 20) **el día que se le facture al gimnasio**, porque Hobby es no-comercial; ese riesgo es una interrupción recuperable, no una pérdida. Las cuentas y el dominio van a nombre del dueño, con Kevin como administrador.
+  - **Precio pensado atado a la cuota, no a un monto fijo**, para que se ajuste solo con la inflación: mensualidad equivalente a 3-4 cuotas de pase libre, implementación equivalente a 10-12.
+  - Se escribieron dos informes de lo que hace el sistema —uno genérico para vender a otros gimnasios y uno de Total Fit por rol—, publicados como páginas web.
 
 - **27/08/2026** — **Producción en Supabase.** Proyecto creado, schema migrado con `prisma migrate deploy` y sembrado con las tres sedes, el dueño y un admin por sucursal.
   - **El `?pgbouncer=true` del puerto 6543 no es opcional.** Sin él Prisma usa prepared statements que el pooler en modo transacción no soporta y falla de manera intermitente: anda en desarrollo y se cae en producción.
