@@ -19,7 +19,7 @@ import { prisma } from "./prisma";
  * - Un `DUENIO` ve la cadena entera y elige con qué sucursal trabaja.
  */
 
-const COOKIE_SEDE = "totalfit_sede";
+const COOKIE_SEDE = "appgym_sede";
 
 export interface ContextoDelPanel {
   usuarioId: string;

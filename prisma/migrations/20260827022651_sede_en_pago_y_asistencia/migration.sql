@@ -4,7 +4,7 @@
 -- socio. Sin esto, trasladar un socio de sucursal le movería el historial
 -- entero y reescribiría la caja pasada de las dos sedes.
 --
--- Escrita a mano y no con `prisma migrate dev`: el rol `totalfit` no tiene
+-- Escrita a mano y no con `prisma migrate dev`: el rol `appgym` no tiene
 -- CREATEDB y no puede crear la shadow database (P3014). Además el SQL que
 -- genera `migrate diff` hace `ADD COLUMN ... NOT NULL` de una, que explota
 -- sobre tablas con filas. Acá va en tres pasos: agregar nullable, rellenar

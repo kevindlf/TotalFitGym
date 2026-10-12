@@ -6,7 +6,7 @@
 
 ## 1. Qué es esto
 
-Un sistema de gestión para el gimnasio **Total Fit**, en Junín. Reemplaza la planilla de Google Sheets que usan hoy para llevar ~349 socios, sus pagos y sus vencimientos.
+Un sistema de gestión para el gimnasio, en Junín. Reemplaza la planilla de Google Sheets que usan hoy para llevar ~349 socios, sus pagos y sus vencimientos.
 
 Tiene tres caras:
 
@@ -27,8 +27,8 @@ Y el socio entra desde su celular con el DNI para ver si tiene la cuota al día.
 Necesitás **Node 20+** y **PostgreSQL** corriendo local.
 
 ```bash
-git clone https://github.com/kevindlf/TotalFitGym.git
-cd TotalFitGym
+git clone https://github.com/kevindlf/AppGym.git
+cd AppGym
 npm install
 ```
 
@@ -36,7 +36,7 @@ Creá la base y el archivo de entorno:
 
 ```bash
 # 1. Creá una base vacía en tu Postgres, por ejemplo:
-createdb totalfit_dev
+createdb AppGym_dev
 
 # 2. Copiá la plantilla de variables
 cp .env.example .env.local
@@ -222,8 +222,8 @@ Probá siempre achicando la ventana a 360px de ancho. El `body` nunca tiene que 
 2. Cloná el repo:
 
 ```bash
-git clone https://github.com/kevindlf/TotalFitGym.git
-cd TotalFitGym
+git clone https://github.com/kevindlf/AppGym.git
+cd AppGym
 ```
 
 ### Cada vez que vayas a trabajar

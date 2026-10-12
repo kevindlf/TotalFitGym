@@ -23,7 +23,7 @@ import { BotonPago } from "./boton-pago";
 import { TarjetaSocio } from "./tarjeta-socio";
 import { exigirPanel } from "@/lib/sede";
 
-export const metadata: Metadata = { title: "Socios · Total Fit" };
+export const metadata: Metadata = { title: "Socios · AppGym" };
 
 export const dynamic = "force-dynamic";
 

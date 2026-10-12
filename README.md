@@ -1,6 +1,6 @@
-# Total Fit — Sistema de gestión de gimnasio
+# AppGym — Sistema de gestión de gimnasio
 
-Reemplaza la planilla de Google Sheets que Total Fit (Junín) usa hoy para socios, pagos y vencimientos.
+Reemplaza la planilla de Google Sheets AppGym (Junín) usa hoy para socios, pagos y vencimientos.
 
 > 👋 **¿Entrás al proyecto por primera vez?** Empezá por [BIENVENIDO.md](BIENVENIDO.md): tiene el arranque, qué está hecho, dónde tocar los estilos y el flujo de trabajo con git.
 

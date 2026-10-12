@@ -21,7 +21,7 @@ import type { SocioConCuota } from "@/lib/socios";
 import { exigirPanel } from "@/lib/sede";
 import { cn } from "@/lib/utils";
 
-export const metadata: Metadata = { title: "Panel · Total Fit" };
+export const metadata: Metadata = { title: "Panel · AppGym" };
 export const dynamic = "force-dynamic";
 
 const TARJETAS: { estado: EstadoCuota; titulo: string; icon: React.ElementType; color: string; bg: string }[] = [

@@ -21,7 +21,7 @@ import { FormularioPersonal } from "./formulario-personal";
 import { TarjetaMiembro } from "./tarjeta-miembro";
 import { exigirPanel } from "@/lib/sede";
 
-export const metadata: Metadata = { title: "Personal · Total Fit" };
+export const metadata: Metadata = { title: "Personal · AppGym" };
 
 export const dynamic = "force-dynamic";
 

@@ -34,7 +34,7 @@ const fuenteLogo = Montserrat({
   weight: ["900"],
 });
 
-export const metadata: Metadata = { title: "Mi cuenta · Total Fit" };
+export const metadata: Metadata = { title: "Mi cuenta · AppGym" };
 
 export const dynamic = "force-dynamic";
 
@@ -68,14 +68,14 @@ export default async function PaginaMiCuenta() {
           {/* Logo actualizado: 'FIT' es ROJO para unificar con la marca */}
           <Link href="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
             <Image 
-              src="/totalfit.jpg" 
-              alt="Logo Total Fit" 
+              src="/logo.jpg" 
+              alt="Logo de AppGym" 
               width={28} 
               height={28} 
               className="rounded-full object-cover"
             />
             <span className={`text-xl uppercase tracking-tighter ${fuenteLogo.className}`}>
-              TOTAL <span className="text-red-600 dark:text-red-500">FIT</span>
+              APP <span className="text-red-600 dark:text-red-500">GYM</span>
             </span>
           </Link>
 

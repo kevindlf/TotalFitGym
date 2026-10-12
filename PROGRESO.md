@@ -1,4 +1,4 @@
-# PROGRESO.md — Total Fit
+# PROGRESO.md — AppGym
 
 > **Bitácora viva.** Este archivo es el punto de entrada para retomar el proyecto en una sesión nueva. Al terminar cada sesión actualizalo: qué se hizo, qué se decidió y por qué. El detalle técnico completo está en `CLAUDE.md`.
 
@@ -26,7 +26,7 @@ El estado del que hay que partir:
 ### Lo primero: levantarlo
 
 ```powershell
-cd "c:\Programación\TotalFit_Gimnasio"
+cd "c:\Programación\AppGym_Gimnasio"
 npm run dev          # http://localhost:3000
 ```
 
@@ -143,7 +143,7 @@ Comandos: `npm run dev` · `npm test` (90) · `npm run lint` · `npm run build` 
 
 ### Técnicas
 - **Stack:** Next.js 16 + PostgreSQL/Prisma 7 + NextAuth v5 + Tailwind v4/shadcn.
-- **DB de desarrollo:** PostgreSQL 18 local, rol `totalfit`, base `totalfit_dev`. Supabase para el deploy.
+- **DB de desarrollo:** PostgreSQL 18 local, rol `appgym`, base `appgym_dev`. Supabase para el deploy.
 - **`tipo_pase`:** enum `MEDIO | LIBRE` + mapa a días en `src/lib/pases.ts` (30 y 30, provisorio).
 - **Zona horaria fija** `America/Argentina/Buenos_Aires`: un pase que vence hoy es ACTIVO todo el día.
 - **Estado de cuota derivado**, nunca guardado.
@@ -199,7 +199,7 @@ Está documentado en la **Regla de Oro 2 de `CLAUDE.md`**, no solo en el código
 
 ## Base de datos local
 
-PostgreSQL 18 local (servicio `postgresql-x64-18`), base `totalfit_dev`, rol dedicado `totalfit`. Migración aplicada y seed ejecutado.
+PostgreSQL 18 local (servicio `postgresql-x64-18`), base `appgym_dev`, rol dedicado `appgym`. Migración aplicada y seed ejecutado.
 
 **Cómo se llegó ahí**, por si hay que repetirlo en otra máquina: Docker no estaba instalado y la password del superusuario `postgres` es desconocida (se probaron varias, ninguna anduvo; no hay `pgpass.conf` ni `PGPASSWORD`). Como recargar la config de Postgres necesita permisos de Administrador, Kevin corrió un script elevado que hizo backup de `pg_hba.conf`, lo puso en `trust` unos segundos, creó rol y base, y lo restauró en un bloque `finally`.
 
@@ -226,7 +226,7 @@ Las contraseñas están en `.env.local`, que está gitignoreado.
 
 - `npm audit`: 3 vulnerabilidades **high** en `deepmerge-ts`, que entra por `@prisma/config` → `prisma` (CLI). Cadena de **devDependency**, no llega al runtime. El fix automático baja a Prisma 6 (breaking). Revisar cuando Prisma publique el bump.
 - Los datos del gimnasio están en un archivo, no en la base. Si el dueño los quiere editar solo, hay que sacarlos a una tabla.
-- **`prisma migrate dev` no corre en esta máquina.** El rol `totalfit` no tiene `CREATEDB` y Prisma necesita crear una base "shadow" temporal para cada migración: falla con `P3014`. Se destraba de una vez con `ALTER ROLE totalfit CREATEDB;` desde un superusuario — el mismo trámite del script elevado con `pg_hba.conf`. Hasta entonces, cada migración se genera a mano con los tres pasos que quedaron documentados en la bitácora del 27/08.
+- **`prisma migrate dev` no corre en esta máquina.** El rol `appgym` no tiene `CREATEDB` y Prisma necesita crear una base "shadow" temporal para cada migración: falla con `P3014`. Se destraba de una vez con `ALTER ROLE appgym CREATEDB;` desde un superusuario — el mismo trámite del script elevado con `pg_hba.conf`. Hasta entonces, cada migración se genera a mano con los tres pasos que quedaron documentados en la bitácora del 27/08.
 - **Los tres admins de producción comparten la clave inicial.** Hasta que se resetee cada una por separado, `registrado_por` no identifica a nadie.
 - Queda una rama local `respaldo-antes-de-limpiar` (nunca se sube) de la limpieza del historial. Se puede borrar: `git branch -D respaldo-antes-de-limpiar`.
 
@@ -241,14 +241,14 @@ Las contraseñas están en `.env.local`, que está gitignoreado.
   - **No se migra a Hetzner.** Se hizo el número: 300 activos son ~170 consultas de puerta por día, con pico de ~25 por hora, y menos de 100 MB de base a cinco años. Vercel y Supabase sobran por dos órdenes de magnitud; el problema no es la carga. Hetzner además no tiene región en Sudamérica (Alemania ~230 ms, Virginia ~120 ms), así que sería más lento que hoy, y suma operación manual —backups, actualizaciones, certificados— que la paga uno con su tiempo un viernes a las 19h.
   - **Qué se paga y cuándo.** Supabase Pro (USD 25) **el día que entren los 349 socios reales**, por los backups diarios: sin eso una pérdida de datos es irreversible. Vercel Pro (USD 20) **el día que se le facture al gimnasio**, porque Hobby es no-comercial; ese riesgo es una interrupción recuperable, no una pérdida. Las cuentas y el dominio van a nombre del dueño, con Kevin como administrador.
   - **Precio pensado atado a la cuota, no a un monto fijo**, para que se ajuste solo con la inflación: mensualidad equivalente a 3-4 cuotas de pase libre, implementación equivalente a 10-12.
-  - Se escribieron dos informes de lo que hace el sistema —uno genérico para vender a otros gimnasios y uno de Total Fit por rol—, publicados como páginas web.
+  - Se escribieron dos informes de lo que hace el sistema —uno genérico para vender a otros gimnasios y uno de AppGym por rol—, publicados como páginas web.
 
 - **27/08/2026** — **Producción en Supabase.** Proyecto creado, schema migrado con `prisma migrate deploy` y sembrado con las tres sedes, el dueño y un admin por sucursal.
   - **El `?pgbouncer=true` del puerto 6543 no es opcional.** Sin él Prisma usa prepared statements que el pooler en modo transacción no soporta y falla de manera intermitente: anda en desarrollo y se cae en producción.
   - **Se cargaron socios de prueba en producción por accidente.** `SEED_DATOS_DEMO=true` vive en el `.env.local` de desarrollo y el CLI de Prisma lo lee de ahí aunque no esté en la terminal; apuntar el seed a Supabase alcanzó para meterle 5 socios inventados. Se borraron y se arregló la causa: ahora el candado es la **cadena de conexión**, no la variable. Los datos de prueba solo entran si la base es `localhost`. Lección: una variable de entorno no protege nada cuando su valor por defecto vive en un archivo del repo.
   - Las credenciales nunca se escribieron a mano en la terminal: se piden con `Read-Host -AsSecureString` y se escapan con `[uri]::EscapeDataString`, porque PowerShell guarda todo lo tipeado en `ConsoleHost_history.txt` y las claves que genera Supabase traen caracteres que rompen una URL.
 
-- **27/08/2026** — **Aislamiento por sede (Regla de Oro 5) y rol `DUENIO`.** Total Fit es una cadena sobre un solo servidor y una sola base, pero cada sucursal ve únicamente lo suyo.
+- **27/08/2026** — **Aislamiento por sede (Regla de Oro 5) y rol `DUENIO`.** AppGYm es una cadena sobre un solo servidor y una sola base, pero cada sucursal ve únicamente lo suyo.
   - **El hallazgo que definió el trabajo:** `sede_id` ya viajaba en el JWT desde el día uno y **no se usaba en ni una sola query**. El modelo multi-sede estaba declarado en la doc y nunca aplicado en runtime. No hubo que rediseñar nada, hubo que hacerlo cumplir.
   - **Se descartó una tabla por sucursal.** Triplicaría cada query, rompería el DNI único, obligaría a migrar tres veces y a tocar código cada vez que abren una sede. El aislamiento sale igual filtrando por `sede_id`, con un solo schema.
   - **`sedeId` es el primer parámetro obligatorio** de cada función de listado. Es la diferencia entre "me acordé de filtrar" y "no compila si no filtro": al cambiar las firmas, TypeScript listó las 10 pantallas que se lo estaban olvidando.
@@ -265,7 +265,7 @@ Las contraseñas están en `.env.local`, que está gitignoreado.
   - **`subida_por` en el modelo:** Regla de Oro 4 aplicada a rutinas. Un test manda un `subida_por` falso en el formulario y verifica que se ignora.
   - `/api/mi-rutina` hubo que **sacarla del matcher de `proxy.ts`**, que exigía sesión de ADMIN para todo `/api/*`: el socio habría recibido un redirect al login en vez de su archivo.
 
-- **27/08/2026** — **Aislamiento por sede (`feature/03`).** Total Fit es una cadena de tres sucursales sobre un solo servidor y una sola base, pero cada una tiene que ver únicamente lo suyo.
+- **27/08/2026** — **Aislamiento por sede (`feature/03`).** AppGym es una cadena de tres sucursales sobre un solo servidor y una sola base, pero cada una tiene que ver únicamente lo suyo.
   - **El hallazgo:** `sede_id` ya viajaba en el JWT y en `session.user` desde el día uno — y no se usaba en **ni una sola query**. El modelo multi-sede estaba declarado y nunca aplicado. El trabajo no fue rediseñar, fue hacerlo cumplir.
   - **Se descartó una tabla por sucursal.** Triplicaría cada query, rompería el DNI único, obligaría a migrar tres veces y a tocar código cada vez que abren una sede. El aislamiento sale igual filtrando por `sede_id`.
   - **`sedeId` es el primer parámetro obligatorio** de cada función de listado (`listarSocios`, `listarPersonal`, `obtenerResumen`, `listarAsistencias`, `evaluarIngresoPorDni`). Si se olvida, no compila. Es la diferencia entre "me acordé de filtrar" y "no puedo no filtrar". Al hacer el cambio, TypeScript listó solo las 9 llamadas que había que tocar.

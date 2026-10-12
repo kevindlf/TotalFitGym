@@ -163,12 +163,13 @@ export async function listarSocios(
     }),
   ]);
 
-  const porSocio = new Map(
-    totales.map((fila) => [
-      fila.usuario_id,
-      { total: Number(fila._sum.monto ?? 0), cantidad: fila._count._all },
-    ]),
-  );
+  const porSocio = new Map<string, { total: number; cantidad: number }>();
+  for (const fila of totales) {
+    porSocio.set(fila.usuario_id, {
+      total: Number(fila._sum.monto ?? 0),
+      cantidad: fila._count._all,
+    });
+  }
 
   return socios.map((socio) => conCuota(socio, porSocio.get(socio.id)));
 }

@@ -38,14 +38,14 @@ export function Encabezado() {
         
         <Link href="/" className="flex items-center gap-2 text-lg tracking-tight sm:text-xl mr-50">
           <Image 
-            src="/totalfit.jpg" 
-            alt="Logo Total Fit" 
+            src="/logo.jpg" 
+            alt="Logo de AppGym" 
             width={48} 
             height={48} 
             className="rounded-full"
           />
           <span className={`${fuenteLogo.className} text-2xl uppercase tracking-tighter`}>
-            TOTAL <span className="text-red-600 dark:text-red-500">FIT</span>
+            APP <span className="text-red-600 dark:text-red-500">GYM</span>
           </span>
         </Link>
 

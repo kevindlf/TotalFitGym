@@ -23,21 +23,21 @@ const PLANES = ["MEDIO", "LIBRE"] as const;
 const SEDES = [
   {
     id: "Junin",
-    nombre: "Total Fit Junín",
+    nombre: "AppGym Junín",
     direccion: "(Centro comercial: La recova)",
     urlMapa: "https://www.google.com/maps/search/?api=1&query=Total+Fit+Junín+Centro+comercial+La+recova",
-    foto: "/sedeJunin.jpg.jpeg",
-    telefono: "+54 9 2604822873",
-    instagram: "total_fit__",
+    foto: "/IMAGEN.jpg",
+    telefono: "+54 9 2634563831",
+    instagram: "_punto.dev",
   },
   {
     id: "San Martin",
-    nombre: "Total Fit San Martín",
+    nombre: "AppGym San Martín",
     direccion: "(Av. Lavalle 565)",
     urlMapa: "https://www.google.com/maps/search/?api=1&query=Total+Fit+San+Martín+Av+Lavalle+565",
-    foto: "/sedeSanMartin.jpg.jpeg",
-    telefono: "+54 9 2604822873",
-    instagram: "total_fit__",
+    foto: "/IMAGEN.jpg",
+    telefono: "+54 9 2634563831",
+    instagram: "_punto.dev",
   },
 ] as const;
 
@@ -53,7 +53,7 @@ export default function PaginaPublica() {
         <section className="mx-auto grid w-full max-w-5xl items-center gap-8 px-4 py-12 sm:px-6 sm:py-16 md:grid-cols-2 md:gap-12">
           <div className="space-y-6">
             <h1 className="text-4xl font-bold tracking-tight text-balance sm:text-5xl">
-              Total Fit: {" "}
+              AppGym: {" "}
               {/* Texto en gris sutil en lugar de rojo */}
               <span className="text-muted-foreground">un espacio para entrenar, superarte y sentirte parte de una comunidad.</span>
             </h1>
@@ -89,8 +89,8 @@ export default function PaginaPublica() {
           </div>
 
          <Foto
-            src="/totalfit.jpg"
-            alt="Logo de Total Fit"
+            src="/logo.jpg"
+            alt="Logo de AppGym"
             className="aspect-square w-full max-w-sm mx-auto rounded-full object-cover shadow-lg"
             prioridad
           />

@@ -32,7 +32,7 @@ const AJENA = { id_sede: "sede_godoy_cruz", nombre: "Godoy Cruz" };
 
 function conCookieDeSede(valor?: string) {
   galletas.mockResolvedValue({
-    get: () => (valor ? { name: "totalfit_sede", value: valor } : undefined),
+    get: () => (valor ? { name: "appgym_sede", value: valor } : undefined),
   } as never);
 }
 

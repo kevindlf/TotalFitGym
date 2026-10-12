@@ -73,7 +73,7 @@ async function main() {
       create: {
         dni: requerido("SEED_DUENIO_DNI"),
         nombre: process.env.SEED_DUENIO_NOMBRE ?? "Dueño",
-        apellido: process.env.SEED_DUENIO_APELLIDO ?? "Total Fit",
+        apellido: process.env.SEED_DUENIO_APELLIDO ?? "AppGym",
         password: await hash(claveMinima("SEED_DUENIO_PASSWORD"), RONDAS_BCRYPT),
         rol: "DUENIO",
         estado: "ACTIVO",
