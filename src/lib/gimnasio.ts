@@ -11,7 +11,7 @@
  */
 
 export const GIMNASIO = {
-  nombre: "Total Fit",
+  nombre: "AppGym",
   lema: "Entrenás vos. Del resto nos ocupamos nosotros.",
 
 
@@ -21,9 +21,9 @@ export const GIMNASIO = {
 
   // REVISAR: teléfono y redes reales
   
-  whatsapp: "2604822873",
-  instagram: "totalfit.junin",
-  email: "totalfitgym118@gmail.com",
+  whatsapp: "2634563831",
+  instagram: "_punto.dev",
+  email: "puntodev@gmail.com",
 } as const;
 
 export const HORARIOS = [

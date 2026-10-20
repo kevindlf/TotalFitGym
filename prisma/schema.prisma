@@ -1,4 +1,4 @@
-// Total Fit — modelo de datos
+// AppGym — modelo de datos
 // Fuente de verdad: CLAUDE.md §3 (modelo) y §4 (Reglas de Oro).
 //
 // Prisma 7: el generator es `prisma-client` (no `prisma-client-js`), `output` es

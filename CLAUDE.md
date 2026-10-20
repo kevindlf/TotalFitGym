@@ -1,4 +1,4 @@
-# CLAUDE.md — Total Fit · Sistema de Gestión de Gimnasio
+# CLAUDE.md · Sistema de Gestión de Gimnasio
 
 > Fuente de verdad para Claude Code. Leelo completo antes de escribir código. Las **Reglas de Oro** (sección 4) son obligatorias.
 
@@ -8,7 +8,7 @@
 
 ## 1. Qué estamos construyendo
 
-Sistema web de gestión para el gimnasio **Total Fit**. Reemplaza la planilla de Google Sheets que hoy usan para socios, pagos y vencimientos. Tres superficies:
+Sistema web de gestión para el gimnasio. Reemplaza la planilla de Google Sheets que hoy usan para socios, pagos y vencimientos. Tres superficies:
 
 - **Recepción (puerta):** se ingresa el DNI del socio → el sistema responde VERDE (puede pasar), AMARILLO (próximo a vencer) o ROJO (vencido). Registra la asistencia.
 - **Panel Admin (dueño/empleado):** alta de socios, registro de pagos, control de vencimientos, métricas de caja, carga de rutinas.
@@ -31,7 +31,7 @@ Escala real actual (planilla): ~349 socios (216 activos, 117 vencidos, 16 próxi
 
 ### SEDE (sucursal)
 - `id_sede` (PK), `nombre`, `direccion`, `estado` (ACTIVA | CERRADA)
-- Total Fit es una **cadena**: San Martín, Ciudad y Godoy Cruz. Un usuario pertenece a **una** sede.
+- AppGym es una **cadena**: San Martín, Ciudad y Godoy Cruz. Un usuario pertenece a **una** sede.
 - Un solo servidor y una sola base para todas, pero **los datos de cada sucursal no se cruzan** (Regla de Oro 5). No hay una tabla por sede: el aislamiento sale de filtrar por `sede_id`, que ya viaja en la sesión.
 
 ### USUARIO (clave de negocio = DNI)

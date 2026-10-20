@@ -20,7 +20,7 @@ import { cookies } from "next/headers";
  * historial y se filtra por el `Referer`.
  */
 
-const NOMBRE_COOKIE = "totalfit_socio";
+const NOMBRE_COOKIE = "appgym_socio";
 
 export type NivelDeSesion = "BASICO" | "COMPLETO";
 

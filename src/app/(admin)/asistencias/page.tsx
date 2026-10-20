@@ -21,7 +21,7 @@ import { formatearFechaHora } from "@/lib/formato";
 import { exigirPanel } from "@/lib/sede";
 import { cn } from "@/lib/utils";
 
-export const metadata: Metadata = { title: "Ingresos · Total Fit" };
+export const metadata: Metadata = { title: "Ingresos · AppGym" };
 
 export const dynamic = "force-dynamic";
 

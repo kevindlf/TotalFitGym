@@ -16,7 +16,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   // Opcional: Generar título dinámico para la pestaña, aunque no es estrictamente necesario.
-  return { title: "Editar socio · Total Fit" };
+  return { title: "Editar socio · AppGym" };
 }
 
 export default async function PaginaEditarSocio({

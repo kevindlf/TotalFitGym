@@ -21,12 +21,12 @@ type ClientePrisma = ReturnType<typeof crearCliente>;
 // En desarrollo el hot reload re-evalúa este módulo en cada cambio. Sin el
 // singleton global se abriría un pool de conexiones nuevo cada vez, hasta
 // agotar la base.
-const cacheGlobal = globalThis as unknown as { prismaTotalFit?: ClientePrisma };
+const cacheGlobal = globalThis as unknown as { prismaAppGym?: ClientePrisma };
 
 function obtenerCliente(): ClientePrisma {
-  cacheGlobal.prismaTotalFit ??= crearCliente();
+  cacheGlobal.prismaAppGym ??= crearCliente();
 
-  return cacheGlobal.prismaTotalFit;
+  return cacheGlobal.prismaAppGym;
 }
 
 /**

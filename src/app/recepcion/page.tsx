@@ -17,7 +17,7 @@ const fuenteLogo = Montserrat({
 });
 
 export const metadata: Metadata = {
-  title: "Recepción · Total Fit",
+  title: "Recepción · AppGym",
 };
 
 export default async function PaginaRecepcion() {
@@ -30,7 +30,7 @@ export default async function PaginaRecepcion() {
       <nav className="flex items-center justify-between border-b border-border/40 bg-background/95 px-4 py-3 shadow-sm backdrop-blur">
         <div className="flex items-center gap-3">
           <span className={`text-lg uppercase tracking-tighter ${fuenteLogo.className}`}>
-            TOTAL <span className="text-red-600 dark:text-red-500">FIT</span>
+            APP <span className="text-red-600 dark:text-red-500">GYM</span>
           </span>
           <span className="hidden rounded-full bg-red-500/10 px-2 py-0.5 text-xs font-semibold text-red-600 dark:text-red-500 ring-1 ring-inset ring-red-500/20 sm:inline-block">
             Sede {ctx.sedeNombre}

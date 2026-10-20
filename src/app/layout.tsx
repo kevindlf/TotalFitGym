@@ -16,9 +16,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Total Fit · Gimnasio",
+  title: "AppGym · Gimnasio",
   description:
-    "Gimnasio Total Fit. Consultá el estado de tu cuota y descargá tu rutina.",
+    "Gimnasio AppGym. Consultá el estado de tu cuota y descargá tu rutina.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

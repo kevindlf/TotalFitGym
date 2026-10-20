@@ -56,14 +56,14 @@ export default async function LayoutAdmin({
           {/* Logo unificado con la marca */}
           <Link href="/dashboard" className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
             <Image 
-              src="/totalfit.jpg" 
-              alt="Logo Total Fit" 
+              src="/logo.jpg" 
+              alt="Logo de AppGym" 
               width={28} 
               height={28} 
               className="rounded-full object-cover"
             />
             <span className={`text-xl uppercase tracking-tighter ${fuenteLogo.className}`}>
-              TOTAL <span className="text-red-600 dark:text-red-500">FIT</span>
+              APP <span className="text-red-600 dark:text-red-500">GYM</span>
             </span>
           </Link>
 

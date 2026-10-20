@@ -16,7 +16,7 @@ const fuenteLogo = Montserrat({
   weight: ["900"],
 });
 
-export const metadata: Metadata = { title: "Ingresar · Total Fit" };
+export const metadata: Metadata = { title: "Ingresar · AppGym" };
 
 export default function PaginaIngresar() {
   return (
@@ -32,14 +32,14 @@ export default function PaginaIngresar() {
         <div className="flex flex-col items-center text-center">
           <Link href="/" className="flex flex-col items-center gap-3 transition-transform hover:scale-105">
             <Image 
-              src="/totalfit.jpg" 
-              alt="Logo Total Fit" 
+              src="/logo.jpg" 
+              alt="Logo de AppGym" 
               width={64} 
               height={64} 
               className="rounded-full object-cover shadow-sm ring-2 ring-background"
             />
             <span className={`text-2xl uppercase tracking-tighter ${fuenteLogo.className}`}>
-              TOTAL <span className="text-red-600 dark:text-red-500">FIT</span>
+              APP <span className="text-red-600 dark:text-red-500">GYM</span>
             </span>
           </Link>
         </div>

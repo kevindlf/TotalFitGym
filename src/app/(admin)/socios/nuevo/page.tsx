@@ -6,7 +6,7 @@ import { exigirPanel } from "@/lib/sede";
 
 import { FormularioSocio } from "./formulario-socio";
 
-export const metadata: Metadata = { title: "Nuevo socio · Total Fit" };
+export const metadata: Metadata = { title: "Nuevo socio · AppGym" };
 
 export const dynamic = "force-dynamic";
 
