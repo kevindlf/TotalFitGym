@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
+import { MarcaAppGym } from "@/components/publico/logo";
 import { Inter, Montserrat } from "next/font/google";
 
 import { SelectorDeSede } from "@/components/admin/selector-de-sede";
@@ -54,13 +54,7 @@ export default async function LayoutAdmin({
           
           {/* Logo unificado con la marca */}
           <Link href="/dashboard" className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
-            <Image 
-              src="/logo.jpg" 
-              alt="Logo de AppGym" 
-              width={28} 
-              height={28} 
-              className="rounded-full object-cover"
-            />
+            <MarcaAppGym className="size-7" />
             <span className={`text-xl uppercase tracking-tighter ${fuenteLogo.className}`}>
               APP <span className="text-red-600 dark:text-red-500">GYM</span>
             </span>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
+import { MarcaAppGym } from "@/components/publico/logo";
 import { Montserrat, Inter } from "next/font/google";
 
 import { BotonTema } from "@/components/ui/boton-tema";
@@ -38,13 +38,7 @@ export function Encabezado() {
       <div className="mx-auto flex w-full max-w-6xl items-center gap-4 px-4 py-3 sm:px-6">
         
         <Link href="/" className="flex items-center gap-2 text-lg tracking-tight sm:text-xl mr-50">
-          <Image 
-            src="/logo.jpg" 
-            alt="Logo de AppGym" 
-            width={48} 
-            height={48} 
-            className="rounded-full"
-          />
+          <MarcaAppGym className="size-11" />
           <span className={`${fuenteLogo.className} text-2xl uppercase tracking-tighter`}>
             APP <span className="text-red-600 dark:text-red-500">GYM</span>
           </span>

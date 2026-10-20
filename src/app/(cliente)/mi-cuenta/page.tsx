@@ -1,7 +1,7 @@
 import { CalendarCheck, Dumbbell, FileText } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image";
+import { MarcaAppGym } from "@/components/publico/logo";
 import { redirect } from "next/navigation";
 import { Inter, Montserrat } from "next/font/google";
 
@@ -67,13 +67,7 @@ export default async function PaginaMiCuenta() {
           
           {/* Logo actualizado: 'FIT' es ROJO para unificar con la marca */}
           <Link href="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
-            <Image 
-              src="/logo.jpg" 
-              alt="Logo de AppGym" 
-              width={28} 
-              height={28} 
-              className="rounded-full object-cover"
-            />
+            <MarcaAppGym className="size-7" />
             <span className={`text-xl uppercase tracking-tighter ${fuenteLogo.className}`}>
               APP <span className="text-red-600 dark:text-red-500">GYM</span>
             </span>
