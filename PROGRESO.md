@@ -6,29 +6,31 @@
 
 # ▶ EMPEZÁ ACÁ
 
-**Última sesión: 18/09/2026.** El MVP está completo, **la base de producción ya existe en Supabase** y **todo está mergeado en `main`**: los PRs que estaban abiertos entraron, y el compañero sumó del 02 al 18 de septiembre catorce commits de estilos, paginación y datos reales del gimnasio. 90 tests, `lint` y `build` limpios.
+**Última sesión: 20/10/2026.** **Total Fit no compró el sistema** — el dueño contrató otro programa. Así que el proyecto deja de ser el producto de un cliente y pasa a ser **producto propio: AppGym**, para venderle a cualquier gimnasio. El estudio de los dos se presenta como `.dev` (Instagram `_punto.dev`).
 
 ### Lo que está pasando ahora mismo
 
-Ya no hay nada bloqueado por revisión. **Lo único que falta para que el gimnasio lo use es el deploy y los datos reales.**
-
-El estado del que hay que partir:
+`main` quedó al día con todo: la rama `feature/11` del compañero (que sacó "Total Fit" de 36 archivos), el arreglo del logo y la página pública rehecha. 90 tests, `lint` y `build` limpios.
 
 | Qué | Estado |
 |---|---|
-| `main` | Al día, con lo de Kevin y lo del compañero juntos |
-| Base de producción | Migrada y sembrada, **con cero socios** |
+| `main` | Al día. Nada pendiente de revisión |
+| Marca | **AppGym**, con el contacto de `.dev` |
+| Página pública | Vende el sistema, ya no es la de un gimnasio |
+| Base de producción | Migrada y sembrada, **con datos de Total Fit** (ver abajo) |
 | Deploy en Vercel | **No hecho todavía** |
 | Región de las funciones | Fijada en `gru1` (São Paulo) con `vercel.json` |
 
-**Las dos sucursales reales son San Martín y Junín, las dos en Mendoza.** Ojo: la base de producción quedó sembrada con **tres** (`SEED_SEDES` = San Martín, Ciudad, Godoy Cruz) y hay que sacar la que sobra, verificando antes que no tenga socios ni pagos colgando.
+> **La base de Supabase quedó con los datos del cliente que se cayó**: tres sedes (San Martín, Ciudad, Godoy Cruz), un dueño y tres admins, cero socios. Hay que decidir si se vacía y se reusa como demostración, o si se deja para el primer cliente que firme. **Mientras tanto el proyecto free se pausa solo** si pasa una semana sin tocarlo: si al abrirlo dice `tenant/user not found`, es eso, y se despierta con "Restore" desde el panel.
 
 ### Lo primero: levantarlo
 
 ```powershell
-cd "c:\Programación\AppGym_Gimnasio"
+cd "c:\Programación\TotalFit_Gimnasio"
 npm run dev          # http://localhost:3000
 ```
+
+> La carpeta sigue llamándose `TotalFit_Gimnasio` aunque el producto ya se llame AppGym. Renombrarla rompe las rutas guardadas de las dos máquinas, así que se deja hasta que haya un motivo mejor.
 
 **Ojo con la terminal.** Si en esa ventana se exportaron las variables de Supabase, la app local se conecta a **producción**. Abrir una ventana nueva; ahí vuelve a tomar `.env.local` (localhost).
 
@@ -40,13 +42,15 @@ Los DNI de local **espejan los de producción a propósito**, pero las claves so
 
 | Falta | Bloqueado por | Quién |
 |---|---|---|
+| **Conseguir el primer cliente** | Nada técnico | Los dos |
 | **Deploy en Vercel** | Nada. Es el próximo paso | Kevin |
-| **Importar los 349 socios** | El CSV de la planilla | Kevin |
-| **Dirección de cada sede** en `src/lib/gimnasio.ts` | Que Kevin las pase | Kevin |
-| **Sacar la tercera sede** de producción | Verificar que no tenga datos colgando | Kevin |
+| **Decidir qué pasa con la base de Supabase** | Si se vacía o se reserva | Los dos |
+| **Script de importación de planilla** | Que el primer cliente pase su Excel | Kevin |
 | **Claves individuales** para los admins | Que esté desplegado | Kevin |
 
-El compañero ya cargó el WhatsApp, el mail y el Instagram reales; lo que queda sin datos es la dirección de cada sucursal, que él dejó comentada.
+**Lo que ya no corre:** importar los 349 socios de Total Fit (era la planilla de ellos) y cargar la dirección de sus dos sucursales. La página pública ya no tiene sedes, así que esos datos no van a ninguna parte.
+
+**Lo que sí sirve de todo eso:** el sistema soporta una cadena de sucursales sin desarrollo extra, y eso ahora es argumento de venta, no un requisito de un cliente.
 
 ### Producción: qué hay hoy en Supabase
 
@@ -233,6 +237,13 @@ Las contraseñas están en `.env.local`, que está gitignoreado.
 ---
 
 ## Bitácora
+
+- **20/10/2026** — **Total Fit canceló; el sistema pasa a ser producto propio.** El dueño del gimnasio compró otro programa. El trabajo no se tira: se le saca la marca del cliente y se convierte en algo vendible a cualquier gimnasio.
+  - **Se mergeó `feature/11` del compañero**, que sacó "Total Fit" de 36 archivos —código, documentación, schema, nombres de cookie, `package.json`— y le puso **AppGym**, con el contacto del estudio (`_punto.dev`). Lo que tocó del schema y de la migración son **solo comentarios**, no SQL: se revisó antes de mergear. Las cookies pasaron a `appgym_socio` y `appgym_sede`, lo que cierra las sesiones abiertas y nada más.
+  - **El bug que habría roto el deploy:** el código pedía `/logo.jpg` en cinco pantallas y el archivo estaba subido como `LOGO.jpg`. En Windows anda porque el sistema de archivos no distingue mayúsculas; **en Vercel es Linux y sí**. El logo se veía bien en desarrollo y habría salido roto en producción, en las cinco pantallas. Arreglado renombrando el archivo.
+  - **La página pública se rehízo entera.** Era la de un gimnasio —sucursales, horarios, planes, "un espacio para entrenar"— pero con el teléfono y el Instagram del estudio: mezclaba las dos cosas y parecía que el estudio era el gimnasio. Ahora le habla al dueño de un gimnasio que lleva todo en una planilla: el problema, la puerta con sus cuatro carteles, el mostrador, el socio, las sucursales, las cuatro reglas y **lo que todavía no hace**. Esto último va a propósito y adelante: evita la venta que se cae en la demostración.
+  - **`gimnasio.ts` pasó a `producto.ts`.** Dejó de describir al gimnasio del cliente y describe al producto. Nadie más lo importaba, solo la landing.
+  - Quedaban dos links al mapa que todavía decían `query=Total+Fit`: se fueron con las sedes.
 
 - **18/09/2026** — **Al día con el compañero, e infraestructura decidida.** Se trajeron los 14 commits suyos (PRs #3 a #9): estilos de todo el panel, paginación en la planilla de socios, componentes partidos en archivos propios y los datos reales del gimnasio en `gimnasio.ts`.
   - **Una regresión encontrada por un test.** Su commit `ef1f06a` dejó el mensaje del cobro en `"Pago registrado."` a secas, sin la fecha de vencimiento. `main` venía con la suite en 89/90. Se devolvió la fecha: el profe cobra parado en el mostrador y necesita leer hasta cuándo quedó cubierto el socio para decírselo ahí mismo, no entrar a la ficha a averiguar lo que acaba de hacer.
