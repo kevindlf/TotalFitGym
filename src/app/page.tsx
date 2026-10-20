@@ -3,7 +3,6 @@ import Link from "next/link";
 import { Inter } from "next/font/google";
 
 import { Encabezado } from "@/components/publico/encabezado";
-import { MarcaAppGym, NombreAppGym } from "@/components/publico/logo";
 import { Button } from "@/components/ui/button";
 import {
   CAPACIDADES,
@@ -38,14 +37,6 @@ export default function PaginaPublica() {
       <main className="flex-1">
         {/* --------------------------------------------------------------- */}
         <section className="mx-auto w-full max-w-5xl space-y-6 px-4 py-12 sm:px-6 sm:py-16">
-          {/* La marca arriba del título y no al costado: en una captura apaisada
-              una columna de texto sola queda desbalanceada, y un logo gigante al
-              lado se come la mitad del cuadro sin decir nada. */}
-          <div className="flex items-center gap-3">
-            <MarcaAppGym className="size-12" />
-            <NombreAppGym className="text-2xl font-black uppercase tracking-tighter" />
-          </div>
-
           <h1 className="max-w-3xl text-4xl font-bold tracking-tight text-balance sm:text-5xl">
             El sistema que reemplaza{" "}
             <span className="text-muted-foreground">

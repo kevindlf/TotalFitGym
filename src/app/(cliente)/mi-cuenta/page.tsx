@@ -1,7 +1,7 @@
 import { CalendarCheck, Dumbbell, FileText } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { MarcaAppGym } from "@/components/publico/logo";
+import { MarcaAppGym, NombreAppGym } from "@/components/publico/logo";
 import { redirect } from "next/navigation";
 import { Inter, Montserrat } from "next/font/google";
 
@@ -69,7 +69,7 @@ export default async function PaginaMiCuenta() {
           <Link href="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
             <MarcaAppGym className="size-7" />
             <span className={`text-xl uppercase tracking-tighter ${fuenteLogo.className}`}>
-              APP <span className="text-red-600 dark:text-red-500">GYM</span>
+              <NombreAppGym />
             </span>
           </Link>
 

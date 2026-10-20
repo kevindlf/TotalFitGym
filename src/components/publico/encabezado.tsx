@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MarcaAppGym } from "@/components/publico/logo";
+import { MarcaAppGym, NombreAppGym } from "@/components/publico/logo";
 import { Montserrat, Inter } from "next/font/google";
 
 import { BotonTema } from "@/components/ui/boton-tema";
@@ -37,10 +37,14 @@ export function Encabezado() {
     <header className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur">
       <div className="mx-auto flex w-full max-w-6xl items-center gap-4 px-4 py-3 sm:px-6">
         
-        <Link href="/" className="flex items-center gap-2 text-lg tracking-tight sm:text-xl mr-50">
+        {/* Sin `mr-50`: eran 200 px de margen fijo para empujar el menú, y
+            justo en el ancho donde el menú aparece (md) empujaba todo fuera de
+            la pantalla y el cuerpo scrolleaba de costado. El menú se separa con
+            el `gap` del contenedor y el resto se va a la derecha con `ml-auto`. */}
+        <Link href="/" className="flex shrink-0 items-center gap-2 text-lg tracking-tight sm:text-xl">
           <MarcaAppGym className="size-11" />
           <span className={`${fuenteLogo.className} text-2xl uppercase tracking-tighter`}>
-            APP <span className="text-red-600 dark:text-red-500">GYM</span>
+            <NombreAppGym />
           </span>
         </Link>
 

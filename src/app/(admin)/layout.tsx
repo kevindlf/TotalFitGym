@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MarcaAppGym } from "@/components/publico/logo";
+import { MarcaAppGym, NombreAppGym } from "@/components/publico/logo";
 import { Inter, Montserrat } from "next/font/google";
 
 import { SelectorDeSede } from "@/components/admin/selector-de-sede";
@@ -56,7 +56,7 @@ export default async function LayoutAdmin({
           <Link href="/dashboard" className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
             <MarcaAppGym className="size-7" />
             <span className={`text-xl uppercase tracking-tighter ${fuenteLogo.className}`}>
-              APP <span className="text-red-600 dark:text-red-500">GYM</span>
+              <NombreAppGym />
             </span>
           </Link>
 

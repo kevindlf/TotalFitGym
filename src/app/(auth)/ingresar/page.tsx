@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { MarcaAppGym } from "@/components/publico/logo";
+import { MarcaAppGym, NombreAppGym } from "@/components/publico/logo";
 import { Inter, Montserrat } from "next/font/google";
 
 import { BotonTema } from "@/components/ui/boton-tema";
@@ -33,7 +33,7 @@ export default function PaginaIngresar() {
           <Link href="/" className="flex flex-col items-center gap-3 transition-transform hover:scale-105">
             <MarcaAppGym className="size-16 drop-shadow-sm" />
             <span className={`text-2xl uppercase tracking-tighter ${fuenteLogo.className}`}>
-              APP <span className="text-red-600 dark:text-red-500">GYM</span>
+              <NombreAppGym />
             </span>
           </Link>
         </div>
