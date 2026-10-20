@@ -10,14 +10,10 @@ import { FormularioEditar } from "./formulario-editar";
 
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}): Promise<Metadata> {
-  // Opcional: Generar título dinámico para la pestaña, aunque no es estrictamente necesario.
-  return { title: "Editar socio · AppGym" };
-}
+// El título no usa el nombre del socio a propósito: queda en el historial del
+// navegador y en la barra de pestañas, que es una pantalla compartida en el
+// mostrador.
+export const metadata: Metadata = { title: "Editar socio · AppGym" };
 
 export default async function PaginaEditarSocio({
   params,

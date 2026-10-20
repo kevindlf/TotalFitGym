@@ -93,9 +93,17 @@ export default async function PaginaDashboard() {
             <table className="w-full text-sm text-left">
               <thead className="bg-muted/30">
                 <tr className="border-b border-border/40 text-xs uppercase tracking-wider text-muted-foreground">
+                  {/*
+                    Los rótulos dicen exactamente lo que trae cada número y no
+                    algo parecido: "Socios" son todos los cargados —incluidos los
+                    dados de baja— y "Deben pagar" son los vencidos más los del
+                    período de gracia, que es lo mismo que cuenta la tarjeta de
+                    morosidad de abajo. Decirle "Vencidos" chocaba con la tarjeta
+                    de arriba, que cuenta solo los rojos.
+                  */}
                   <th className="px-5 py-4 font-medium">Sucursal</th>
-                  <th className="px-5 py-4 font-medium">Activos</th>
-                  <th className="px-5 py-4 font-medium">Vencidos</th>
+                  <th className="px-5 py-4 font-medium">Socios</th>
+                  <th className="px-5 py-4 font-medium">Deben pagar</th>
                   <th className="px-5 py-4 font-medium text-right">Ingresos del mes</th>
                 </tr>
               </thead>
