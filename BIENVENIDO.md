@@ -150,9 +150,9 @@ Si tocás `button.tsx`, cambian **todos** los botones del sistema. Es el segundo
 
 > ⚠️ Este shadcn está construido sobre **Base UI, no Radix**. No existe la prop `asChild`. Para que un botón sea un link va `render={<Link href="..." />}`.
 
-### 📝 `src/lib/gimnasio.ts` — los textos de la landing
+### 📝 `src/lib/producto.ts` — los textos de la landing
 
-Nombre, descripción, dirección, teléfono, horarios, actividades y qué incluye cada plan. **No hace falta entrar al JSX para cambiar un horario o un texto.**
+Nombre del producto, lema, datos de contacto, los cuatro carteles de la puerta, las cuatro reglas y lo que el sistema todavía no hace. **No hace falta entrar al JSX para cambiar un texto de la página pública.**
 
 ### 📄 Las páginas
 

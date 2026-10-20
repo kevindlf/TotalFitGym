@@ -18,10 +18,11 @@ const fuenteNormal = Inter({
 });
 
 const SECCIONES = [
-  { href: "#nosotros", texto: "El gimnasio" },
-  { href: "#planes", texto: "Planes" },
-  { href: "#horarios", texto: "Horarios" },
-  { href: "#donde", texto: "Sedes" },
+  { href: "#la-puerta", texto: "La puerta" },
+  { href: "#el-mostrador", texto: "El mostrador" },
+  { href: "#el-socio", texto: "El socio" },
+  { href: "#sucursales", texto: "Sucursales" },
+  { href: "#contacto", texto: "Contacto" },
 ];
 
 /**
