@@ -6,11 +6,15 @@
 
 # ▶ EMPEZÁ ACÁ
 
-**Última sesión: 20/10/2026.** **Total Fit no compró el sistema** — el dueño contrató otro programa. Así que el proyecto deja de ser el producto de un cliente y pasa a ser **producto propio: AppGym**, para venderle a cualquier gimnasio. El estudio de los dos se presenta como `.dev` (Instagram `_punto.dev`).
+**Última sesión: 21/10/2026.** **Total Fit no compró el sistema** — el dueño contrató otro programa. Así que el proyecto deja de ser el producto de un cliente y pasa a ser **producto propio: AppGym**, para venderle a cualquier gimnasio. El estudio de los dos se presenta como `.dev` (Instagram `_punto.dev`).
 
 ### Lo que está pasando ahora mismo
 
-`main` quedó al día con todo: la rama `feature/11` del compañero (que sacó "Total Fit" de 36 archivos), el arreglo del logo y la página pública rehecha. 90 tests, `lint` y `build` limpios.
+**La demostración está online y probada de punta a punta:** https://total-fit-gym.vercel.app
+
+Ese link ya se le puede mandar a cualquier gimnasio. Se entra con DNI `20100001` y clave `duenio-demo-2026`. Verificado contra el sitio publicado: el login cae en el dominio real, el panel lee la base, la puerta escribe la asistencia y el portal del socio contesta. Sin errores de servidor ni de consola.
+
+`main` está al día: la rama `feature/11` del compañero, el arreglo del logo, la página pública rehecha y la marca dibujada en el código. 90 tests, `lint` y `build` limpios.
 
 | Qué | Estado |
 |---|---|
@@ -18,7 +22,7 @@
 | Marca | **AppGym**, con el contacto de `.dev` |
 | Página pública | Vende el sistema, ya no es la de un gimnasio |
 | Base de producción | **Instancia de demostración**: 2 sedes, 10 socios, 18 pagos (ver abajo) |
-| Deploy en Vercel | **No hecho todavía** |
+| Deploy en Vercel | ✅ **https://total-fit-gym.vercel.app** |
 | Región de las funciones | Fijada en `gru1` (São Paulo) con `vercel.json` |
 
 > **La base de Supabase es la instancia de demostración.** Se vació el 21/10 —se fueron las tres sedes de Total Fit, sus cuatro admins y un usuario de prueba— y se sembró con `scripts/demo-reset.ts`: dos sedes (Centro y Norte), tres cuentas de personal, diez socios repartidos en los cuatro estados de cuota, 18 pagos y 24 asistencias. **Las fechas se calculan relativas al día que se corre el script**, así que la demostración no envejece: siempre hay alguien al día, alguien por vencer y alguien vencido. Para dejarla como nueva después de una demostración, se vuelve a correr.
@@ -29,26 +33,36 @@
 
 ```powershell
 cd "c:\Programación\TotalFit_Gimnasio"
-npm run dev          # http://localhost:3000
+npm run dev          # http://localhost:3001
 ```
+
+> **En la máquina de Kevin el puerto 3000 lo ocupa otro proyecto**, así que Next cae solo en el 3001 y `AUTH_URL` en `.env.local` apunta ahí. Si en otra máquina levanta en el 3000, hay que cambiar esa variable: si no coincide, después del login el navegador se va al puerto equivocado — y si ahí hay otra app, se entra a la app ajena sin entender por qué.
 
 > La carpeta sigue llamándose `TotalFit_Gimnasio` aunque el producto ya se llame AppGym. Renombrarla rompe las rutas guardadas de las dos máquinas, así que se deja hasta que haya un motivo mejor.
 
 **Ojo con la terminal.** Si en esa ventana se exportaron las variables de Supabase, la app local se conecta a **producción**. Abrir una ventana nueva; ahí vuelve a tomar `.env.local` (localhost).
 
-**Entrar al panel local:** DNI `45876955` (dueño) o `45876958` (admin San Martín). Las claves están en `.env.local`, en `SEED_DUENIO_PASSWORD` y `SEED_ADMIN_PASSWORD`.
+**Entrar al panel, en local y en la demostración:** las dos bases están sembradas con los mismos datos de demostración, así que sirven las mismas cuentas.
 
-Los DNI de local **espejan los de producción a propósito**, pero las claves son distintas: la de producción no vive en esta máquina. Para saber en qué base estás: si `/socios` muestra socios, es local — producción tiene cero.
+| DNI | Quién | Clave |
+|---|---|---|
+| `20100001` | Marcela Duarte, dueña (ve las dos sedes) | `duenio-demo-2026` |
+| `20100002` | Pablo Herrera, profe de Centro | `profe-demo-2026` |
+| `20100003` | Lucía Ferrari, profe de Norte | `profe-demo-2026` |
+
+Socios para la puerta: `30111001` verde · `30111002` amarillo · `30111003` rojo vencido · `30111004` nunca pagó · `30111009` y `30111010` son de la sede Norte, que es lo que permite mostrar el rechazo entre sucursales.
+
+> **Ojo: ya no se distinguen por los datos.** Antes producción tenía cero socios y eso alcanzaba para saber dónde estabas parado; ahora las dos tienen diez. La única forma de saberlo es mirar qué líneas están activas en `.env.local`, o la URL del navegador.
 
 ### Lo que falta, y qué lo bloquea
 
 | Falta | Bloqueado por | Quién |
 |---|---|---|
-| **Conseguir el primer cliente** | Nada técnico | Los dos |
-| **Deploy en Vercel** | Nada. Es el próximo paso | Kevin |
-| **Publicar la demo** | Que esté desplegada | Kevin |
+| **Conseguir el primer cliente** | Nada técnico. Es lo único que falta | Los dos |
+| **Sacar "total-fit" del dominio** | Nada. Settings → Domains en Vercel | Kevin |
+| **Publicar las capturas y el video** | Nada. Están en el escritorio de Kevin | Los dos |
 | **Script de importación de planilla** | Que el primer cliente pase su Excel | Kevin |
-| **Claves individuales** para los admins | Que esté desplegado | Kevin |
+| **Vercel Pro y Supabase Pro** | Que haya un cliente que pague | Kevin |
 
 **Lo que ya no corre:** importar los 349 socios de Total Fit (era la planilla de ellos) y cargar la dirección de sus dos sucursales. La página pública ya no tiene sedes, así que esos datos no van a ninguna parte.
 
@@ -97,9 +111,11 @@ Proyecto `pvozjckedgyytjkkeogp`, región São Paulo. Schema migrado (3 migracion
 | Modo claro / oscuro | ✅ Botón en las 4 superficies. |
 | Responsive | ✅ Tarjetas en celular, tablas en escritorio. |
 | **Rutinas** | ⏸️ Hecho pero **apagado** (`RUTINAS_HABILITADAS=false`): el gimnasio usa su QR. |
-| **Import de la planilla** | ❌ Necesita el CSV. |
-| **Base de producción** | ✅ Supabase migrado y sembrado. |
-| **Deploy en Vercel** | ❌ Espera que se mergeen los dos PRs. |
+| **Import de la planilla** | ❌ Necesita el Excel del primer cliente. |
+| **Base de producción** | ✅ Sembrada como instancia de demostración. |
+| **Deploy en Vercel** | ✅ https://total-fit-gym.vercel.app, probado de punta a punta. |
+| **Página pública** | ✅ Rehecha: vende el sistema, no es la de un gimnasio. |
+| **Capturas y video** | ✅ En el escritorio de Kevin, listos para publicar. |
 
 ### Las 5 Reglas de Oro, verificadas contra la base real
 
@@ -239,6 +255,11 @@ Las contraseñas están en `.env.local`, que está gitignoreado.
 ---
 
 ## Bitácora
+
+- **21/10/2026** — **La demostración quedó online: https://total-fit-gym.vercel.app** El primer deploy salió derecho y se verificó contra el sitio publicado, no de palabra: entra el personal y cae en el dominio real, el panel lee la base, la puerta escribe la asistencia y el portal del socio contesta. Cero errores de servidor y de consola.
+  - **Lo que se chequeó a propósito** son las tres cosas que rompen un primer deploy: que `AUTH_URL` no mande a `localhost` —el redirect apunta al dominio de Vercel—, que la conexión con el pooler de Supabase aguante (si faltara el `?pgbouncer=true` fallaría de forma intermitente, y la asistencia se escribió), y que el logo cargue, que es justo el archivo que en Linux no existía por estar en mayúsculas.
+  - **Queda sacar "total-fit" del dominio.** Mandarle a un gimnasio un link con el nombre del cliente que no compró es raro; se cambia en Settings → Domains.
+  - **La demo es pública y se puede desordenar.** Cualquiera con el link y las claves puede dar socios de baja o cambiar DNI. Borrar no, eso no existe en el sistema. Se deja como nueva volviendo a correr `scripts/demo-reset.ts --confirmar`.
 
 - **21/10/2026** — **La base de Supabase pasa a ser la demostración, y material para publicar.** El proyecto estaba pausado por inactividad; una vez despierto se vació y se sembró con `scripts/demo-reset.ts`. Quedó con dos sedes, tres cuentas de personal y diez socios en los cuatro estados, verificado contra la base: 3 verdes, 3 amarillos, 3 rojos vencidos y 1 sin pagos.
   - **Se armaron las capturas y dos videos** con Playwright, en claro y oscuro, para computadora y para celular. El video cuenta una sola historia: la puerta rechaza a alguien, se le cobra con un click, y la puerta lo deja pasar. Quedaron en el escritorio de Kevin, fuera del repo: son 26 MB de imágenes que envejecen con cada cambio de pantalla.
