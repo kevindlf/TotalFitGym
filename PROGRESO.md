@@ -17,11 +17,13 @@
 | `main` | Al día. Nada pendiente de revisión |
 | Marca | **AppGym**, con el contacto de `.dev` |
 | Página pública | Vende el sistema, ya no es la de un gimnasio |
-| Base de producción | Migrada y sembrada, **con datos de Total Fit** (ver abajo) |
+| Base de producción | **Instancia de demostración**: 2 sedes, 10 socios, 18 pagos (ver abajo) |
 | Deploy en Vercel | **No hecho todavía** |
 | Región de las funciones | Fijada en `gru1` (São Paulo) con `vercel.json` |
 
-> **La base de Supabase quedó con los datos del cliente que se cayó**: tres sedes (San Martín, Ciudad, Godoy Cruz), un dueño y tres admins, cero socios. Hay que decidir si se vacía y se reusa como demostración, o si se deja para el primer cliente que firme. **Mientras tanto el proyecto free se pausa solo** si pasa una semana sin tocarlo: si al abrirlo dice `tenant/user not found`, es eso, y se despierta con "Restore" desde el panel.
+> **La base de Supabase es la instancia de demostración.** Se vació el 21/10 —se fueron las tres sedes de Total Fit, sus cuatro admins y un usuario de prueba— y se sembró con `scripts/demo-reset.ts`: dos sedes (Centro y Norte), tres cuentas de personal, diez socios repartidos en los cuatro estados de cuota, 18 pagos y 24 asistencias. **Las fechas se calculan relativas al día que se corre el script**, así que la demostración no envejece: siempre hay alguien al día, alguien por vencer y alguien vencido. Para dejarla como nueva después de una demostración, se vuelve a correr.
+>
+> **El proyecto free se pausa solo** si pasa una semana sin tocarlo: si al abrirlo dice `tenant/user not found`, es eso y no un problema de credenciales. Se despierta con "Restore" desde el panel y no se pierde nada.
 
 ### Lo primero: levantarlo
 
@@ -44,7 +46,7 @@ Los DNI de local **espejan los de producción a propósito**, pero las claves so
 |---|---|---|
 | **Conseguir el primer cliente** | Nada técnico | Los dos |
 | **Deploy en Vercel** | Nada. Es el próximo paso | Kevin |
-| **Decidir qué pasa con la base de Supabase** | Si se vacía o se reserva | Los dos |
+| **Publicar la demo** | Que esté desplegada | Kevin |
 | **Script de importación de planilla** | Que el primer cliente pase su Excel | Kevin |
 | **Claves individuales** para los admins | Que esté desplegado | Kevin |
 
@@ -237,6 +239,12 @@ Las contraseñas están en `.env.local`, que está gitignoreado.
 ---
 
 ## Bitácora
+
+- **21/10/2026** — **La base de Supabase pasa a ser la demostración, y material para publicar.** El proyecto estaba pausado por inactividad; una vez despierto se vació y se sembró con `scripts/demo-reset.ts`. Quedó con dos sedes, tres cuentas de personal y diez socios en los cuatro estados, verificado contra la base: 3 verdes, 3 amarillos, 3 rojos vencidos y 1 sin pagos.
+  - **Se armaron las capturas y dos videos** con Playwright, en claro y oscuro, para computadora y para celular. El video cuenta una sola historia: la puerta rechaza a alguien, se le cobra con un click, y la puerta lo deja pasar. Quedaron en el escritorio de Kevin, fuera del repo: son 26 MB de imágenes que envejecen con cada cambio de pantalla.
+  - **Tres cosas aparecieron al hacerlo.** `AUTH_URL` apuntaba al puerto 3000, que en la máquina de Kevin lo ocupa otro proyecto, así que después del login la app caía en el 404 ajeno. El logo era un placeholder —la palabra "LOGO" sobre el damero de transparencia— y el favicon era un JPEG de 2048x2048 renombrado a `.ico`, un megabyte para un ícono de 16 píxeles. Y la puerta decía "Sin pagos registrados" de un socio de otra sucursal, que es falso: el sistema no le busca el vencimiento a propósito, y la pantalla leía ese vacío como que nunca pagó.
+  - **La marca pasó a ser un SVG dibujado en el código** (`components/publico/logo.tsx`), nítido a cualquier tamaño y sin un archivo que se pueda volver a romper por el nombre, como pasó con `LOGO.jpg` en Linux.
+  - **Un borrado sobre la base de producción lo tiene que disparar una persona.** El intento desde acá lo frenó el clasificador de permisos, y está bien que lo haya hecho: el ensayo sirve para ver qué se va a borrar, pero el `--confirmar` sobre una base remota lo corrió Kevin desde su terminal.
 
 - **20/10/2026** — **Total Fit canceló; el sistema pasa a ser producto propio.** El dueño del gimnasio compró otro programa. El trabajo no se tira: se le saca la marca del cliente y se convierte en algo vendible a cualquier gimnasio.
   - **Se mergeó `feature/11` del compañero**, que sacó "Total Fit" de 36 archivos —código, documentación, schema, nombres de cookie, `package.json`— y le puso **AppGym**, con el contacto del estudio (`_punto.dev`). Lo que tocó del schema y de la migración son **solo comentarios**, no SQL: se revisó antes de mergear. Las cookies pasaron a `appgym_socio` y `appgym_sede`, lo que cierra las sesiones abiertas y nada más.
