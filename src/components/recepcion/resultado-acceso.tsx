@@ -51,6 +51,15 @@ const MENSAJES_RECHAZO: Record<MotivoRechazo, string> = {
 };
 
 function textoVencimiento(resultado: ResultadoIngreso): string {
+  // De un socio de otra sucursal no sabemos el vencimiento: la evaluación corta
+  // antes de buscarlo, justamente para no mostrar los datos de la sede ajena.
+  // Ese vacío NO es "nunca pagó" — decirlo sería mentirle al profe sobre
+  // alguien que puede tener la cuota al día en el otro local. La línea se deja
+  // vacía y el motivo de abajo explica a dónde mandarlo.
+  if (resultado.motivo === "OTRA_SEDE") {
+    return "";
+  }
+
   if (!resultado.fechaVencimiento) {
     return "Sin pagos registrados";
   }
@@ -109,7 +118,9 @@ export function ResultadoAcceso({
             ? `${resultado.socio.nombre} ${resultado.socio.apellido}`
             : `DNI ${dniConsultado}`}
         </p>
-        <p className="text-lg opacity-90">{textoVencimiento(resultado)}</p>
+        {textoVencimiento(resultado) ? (
+          <p className="text-lg opacity-90">{textoVencimiento(resultado)}</p>
+        ) : null}
       </div>
 
       {resultado.motivo ? (
